@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const featuredAuctions = [
   {
     title: "Rolex Submariner 2024",
@@ -44,14 +46,21 @@ export default function Home() {
               <span className="text-lg font-semibold tracking-tight">BidMe</span>
             </div>
             <ul className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
-              <li>Auctions</li>
+              <li>
+                <Link href="/auctions" className="hover:text-white">
+                  Auctions
+                </Link>
+              </li>
               <li>Categories</li>
               <li>How it Works</li>
               <li>Sellers</li>
             </ul>
-            <button className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/5">
+            <Link
+              href="/login"
+              className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/5"
+            >
               Sign In
-            </button>
+            </Link>
           </nav>
         </header>
 
@@ -69,12 +78,18 @@ export default function Home() {
                 experience designed for high-value products.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <button className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300">
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
+                >
                   Start Bidding
-                </button>
-                <button className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5">
+                </Link>
+                <Link
+                  href="/auctions"
+                  className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5"
+                >
                   Explore Auctions
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -105,9 +120,9 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
         <div className="mb-8 flex items-center justify-between">
           <h3 className="text-2xl font-semibold text-white sm:text-3xl">Featured Auctions</h3>
-          <button className="text-sm font-medium text-cyan-300 hover:text-cyan-200">
+          <Link href="/dashboard" className="text-sm font-medium text-cyan-300 hover:text-cyan-200">
             View all
-          </button>
+          </Link>
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {featuredAuctions.map((item) => (
