@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
 const featuredAuctions = [
   {
@@ -30,7 +31,13 @@ const categories = [
   "Memorabilia",
 ];
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAuthenticated = Boolean(user);
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="relative overflow-hidden">
@@ -56,10 +63,10 @@ export default function Home() {
               <li>Sellers</li>
             </ul>
             <Link
-              href="/login"
+              href={isAuthenticated ? "/dashboard" : "/login"}
               className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/5"
             >
-              Sign In
+              {isAuthenticated ? "Dashboard" : "Sign In"}
             </Link>
           </nav>
         </header>
@@ -79,7 +86,7 @@ export default function Home() {
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
-                  href="/signup"
+                  href={isAuthenticated ? "/auctions" : "/signup"}
                   className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
                 >
                   Start Bidding
