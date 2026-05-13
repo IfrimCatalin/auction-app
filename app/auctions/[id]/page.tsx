@@ -74,17 +74,6 @@ export default async function AuctionDetailsPage({
   }
 
   const listing = data as ListingDetails;
-  const auctionEnded =
-    listing.status !== "active" || new Date(listing.auction_end).getTime() <= Date.now();
-  const isSeller = user?.id === listing.seller_id;
-  const bidDisabled = auctionEnded || isSeller;
-
-  let bidDisabledReason = "";
-  if (auctionEnded) {
-    bidDisabledReason = "Bidding is closed because this auction has ended.";
-  } else if (isSeller) {
-    bidDisabledReason = "You cannot bid on your own listing.";
-  }
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 lg:px-8">
@@ -141,10 +130,9 @@ export default async function AuctionDetailsPage({
             ) : (
               <BidForm
                 listingId={listing.id}
-                bidderId={user.id}
                 currentPrice={listing.current_price}
-                disabled={bidDisabled}
-                disabledReason={bidDisabledReason}
+                sellerId={listing.seller_id}
+                auctionEnd={listing.auction_end}
               />
             )}
 
