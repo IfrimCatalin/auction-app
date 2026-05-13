@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Premium auctions for rare items",
+  description:
+    "GoBidMe brings collectors and sellers together—discover live auctions, place bids, and manage listings in one modern marketplace.",
+};
 
 const featuredAuctions = [
   {
@@ -50,7 +57,7 @@ export default async function Home() {
           <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
-              <span className="text-lg font-semibold tracking-tight">BidMe</span>
+              <span className="text-lg font-semibold tracking-tight">GoBidMe</span>
             </div>
             <ul className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
               <li>
@@ -74,14 +81,14 @@ export default async function Home() {
         <section className="mx-auto max-w-7xl px-6 pb-20 pt-16 lg:px-8 lg:pt-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
-                Premium Marketplace
+              <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-400/10 px-4 py-1 text-xs font-semibold tracking-wide text-cyan-300">
+                GoBidMe Marketplace
               </p>
               <h1 className="mt-6 text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
-                Discover rare items and bid with confidence.
+                Discover rare items on GoBidMe and bid with confidence.
               </h1>
               <p className="mt-6 max-w-xl text-base text-slate-300 sm:text-lg">
-                BidMe connects serious buyers with trusted sellers in a sleek, secure auction
+                GoBidMe connects serious buyers with trusted sellers in a sleek, secure auction
                 experience designed for high-value products.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
@@ -175,7 +182,7 @@ export default async function Home() {
 
       <footer className="border-t border-white/10 py-8">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-6 text-sm text-slate-400 sm:flex-row sm:items-center lg:px-8">
-          <p>© {new Date().getFullYear()} BidMe. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} GoBidMe. All rights reserved.</p>
           <div className="flex items-center gap-5">
             <a href="#" className="hover:text-slate-200">
               Terms

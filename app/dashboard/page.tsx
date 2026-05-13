@@ -18,8 +18,8 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">BidMe</p>
-            <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Dashboard</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">GoBidMe</p>
+            <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">GoBidMe Dashboard</h1>
             <p className="mt-2 text-sm text-slate-300">Signed in as {user.email}</p>
           </div>
           <div className="flex items-center gap-3">

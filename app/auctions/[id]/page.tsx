@@ -1,6 +1,27 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BidForm } from "@/components/bid-form";
 import { createClient } from "@/lib/supabase/server";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("listings").select("title").eq("id", id).maybeSingle();
+
+  if (!data?.title) {
+    return { title: "Auction" };
+  }
+
+  return {
+    title: data.title,
+    description: `View details and place bids on ${data.title} at GoBidMe.`,
+  };
+}
 
 type ListingDetails = {
   id: string;
@@ -37,6 +58,9 @@ export default async function AuctionDetailsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("listings")
     .select(
@@ -50,6 +74,17 @@ export default async function AuctionDetailsPage({
   }
 
   const listing = data as ListingDetails;
+  const auctionEnded =
+    listing.status !== "active" || new Date(listing.auction_end).getTime() <= Date.now();
+  const isSeller = user?.id === listing.seller_id;
+  const bidDisabled = auctionEnded || isSeller;
+
+  let bidDisabledReason = "";
+  if (auctionEnded) {
+    bidDisabledReason = "Bidding is closed because this auction has ended.";
+  } else if (isSeller) {
+    bidDisabledReason = "You cannot bid on your own listing.";
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 lg:px-8">
@@ -94,28 +129,24 @@ export default async function AuctionDetailsPage({
 
           <aside className="rounded-2xl border border-white/10 bg-slate-900/70 p-6">
             <h2 className="text-xl font-semibold text-white">Place Bid</h2>
-            <p className="mt-2 text-sm text-slate-300">
-              Bidding form placeholder. Bid logic will be added next.
-            </p>
+            <p className="mt-2 text-sm text-slate-300">Current highest bid: {formatPrice(listing.current_price)}</p>
 
-            <form className="mt-5 space-y-3">
-              <label className="block">
-                <span className="mb-2 block text-sm text-slate-300">Bid Amount</span>
-                <input
-                  type="number"
-                  disabled
-                  placeholder="Coming soon"
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-500 outline-none"
-                />
-              </label>
-              <button
-                type="button"
-                disabled
-                className="w-full cursor-not-allowed rounded-full bg-cyan-400/40 px-5 py-3 font-semibold text-slate-950"
-              >
-                Bid Placement Coming Soon
-              </button>
-            </form>
+            {!user ? (
+              <div className="mt-5 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300">
+                You must be signed in to place a bid.{" "}
+                <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">
+                  Sign in
+                </Link>
+              </div>
+            ) : (
+              <BidForm
+                listingId={listing.id}
+                bidderId={user.id}
+                currentPrice={listing.current_price}
+                disabled={bidDisabled}
+                disabledReason={bidDisabledReason}
+              />
+            )}
 
             <div className="mt-8 space-y-2 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-xs text-slate-400">
               <p>Listing ID: {listing.id}</p>

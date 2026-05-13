@@ -38,9 +38,11 @@ export default function SignupPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-slate-100">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-2xl shadow-black/40 backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">BidMe</p>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Create your account</h1>
-        <p className="mt-2 text-sm text-slate-300">Sign up and start bidding on premium listings.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">GoBidMe</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">Create your GoBidMe account</h1>
+        <p className="mt-2 text-sm text-slate-300">
+          Join GoBidMe and start bidding on premium listings from trusted sellers.
+        </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <label className="block">
