@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,6 +18,12 @@ const categoryOptions = [
   "Other",
 ];
 
+const STORAGE_BUCKET = "listing-images";
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const inputClass =
+  "w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900";
+
 export function CreateListingForm({ sellerId }: CreateListingFormProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -27,12 +33,63 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
   const [category, setCategory] = useState(categoryOptions[0]);
   const [startingPrice, setStartingPrice] = useState("");
   const [auctionEnd, setAuctionEnd] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    setErrorMessage("");
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please select an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      setErrorMessage("Image must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+
+    setUploading(true);
+
+    const extension = file.name.includes(".")
+      ? file.name.split(".").pop()!.toLowerCase()
+      : "jpg";
+    const path = `${sellerId}/${crypto.randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      setErrorMessage(`Image upload failed: ${uploadError.message}`);
+      setUploading(false);
+      event.target.value = "";
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(path);
+
+    setImageUrl(publicUrlData.publicUrl);
+    setUploading(false);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+
+    if (uploading) {
+      setErrorMessage("Please wait for the image to finish uploading.");
+      return;
+    }
+
     setLoading(true);
 
     const parsedPrice = Number(startingPrice);
@@ -58,6 +115,7 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
       auction_end: auctionEndDate.toISOString(),
       status: "active",
       seller_id: sellerId,
+      image_url: imageUrl,
     });
 
     if (error) {
@@ -71,83 +129,114 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
+        <label className="mb-2 block text-sm font-medium text-stone-700">Photo</label>
+        <div className="overflow-hidden rounded-2xl border border-dashed border-stone-300 bg-stone-50">
+          {uploading ? (
+            <div className="flex aspect-[4/3] w-full items-center justify-center text-sm text-stone-500">
+              Uploading…
+            </div>
+          ) : imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt="Listing preview"
+              className="aspect-[4/3] w-full object-cover"
+            />
+          ) : (
+            <div className="flex aspect-[4/3] w-full items-center justify-center text-xs text-stone-500">
+              PNG or JPG · up to 5 MB
+            </div>
+          )}
+        </div>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          disabled={uploading || loading}
+          className="mt-3 block w-full cursor-pointer rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700 file:mr-4 file:rounded-full file:border-0 file:bg-stone-900 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+        />
+      </div>
+
       <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Title</span>
+        <span className="mb-2 block text-sm font-medium text-stone-700">Title</span>
         <input
           type="text"
           required
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2"
-          placeholder="Luxury watch, rare collectible..."
+          className={inputClass}
+          placeholder="What are you selling?"
         />
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Description</span>
+        <span className="mb-2 block text-sm font-medium text-stone-700">Description</span>
         <textarea
           required
           rows={4}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2"
-          placeholder="Describe the condition, authenticity, included items, and details."
+          className={inputClass}
+          placeholder="Condition, authenticity, what’s included…"
         />
       </label>
 
-      <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Category</span>
-        <select
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
-        >
-          {categoryOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-stone-700">Category</span>
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className={inputClass}
+          >
+            {categoryOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-stone-700">Starting price</span>
+          <input
+            type="number"
+            required
+            min="0.01"
+            step="0.01"
+            value={startingPrice}
+            onChange={(event) => setStartingPrice(event.target.value)}
+            className={inputClass}
+            placeholder="500.00"
+          />
+        </label>
+      </div>
 
       <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Starting Price</span>
-        <input
-          type="number"
-          required
-          min="0.01"
-          step="0.01"
-          value={startingPrice}
-          onChange={(event) => setStartingPrice(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2"
-          placeholder="500.00"
-        />
-      </label>
-
-      <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Auction End Date</span>
+        <span className="mb-2 block text-sm font-medium text-stone-700">Auction end</span>
         <input
           type="datetime-local"
           required
           value={auctionEnd}
           onChange={(event) => setAuctionEnd(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className={inputClass}
         />
       </label>
 
       {errorMessage ? (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {errorMessage}
         </p>
       ) : null}
 
       <button
         type="submit"
-        disabled={loading}
-        className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={loading || uploading}
+        className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Creating listing..." : "Create Listing"}
+        {loading ? "Publishing…" : "Publish listing"}
       </button>
     </form>
   );

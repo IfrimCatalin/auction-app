@@ -14,26 +14,31 @@ export default async function CreateListingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 lg:px-8">
-      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-2xl shadow-black/40 backdrop-blur">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">GoBidMe</p>
-            <h1 className="mt-3 text-3xl font-semibold text-white">Create Listing</h1>
-            <p className="mt-2 text-sm text-slate-300">
-              Add your item details and launch a new auction.
-            </p>
-          </div>
+    <main className="min-h-screen bg-stone-50 text-stone-900">
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            GoBidMe
+          </Link>
           <Link
             href="/dashboard"
-            className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/40 hover:bg-white/5"
+            className="text-sm font-medium text-stone-600 transition hover:text-stone-900"
           >
-            Back
+            ← Dashboard
           </Link>
-        </div>
+        </nav>
+      </header>
 
-        <CreateListingForm sellerId={user.id} />
-      </div>
+      <section className="mx-auto max-w-2xl px-5 py-10 lg:px-8 lg:py-14">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">List an item</h1>
+        <p className="mt-2 text-sm text-stone-500">
+          Share something special with the community. Add a clear photo and an honest description.
+        </p>
+
+        <div className="mt-8 rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
+          <CreateListingForm sellerId={user.id} />
+        </div>
+      </section>
     </main>
   );
 }

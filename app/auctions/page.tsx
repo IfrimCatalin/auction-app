@@ -8,89 +8,127 @@ type ListingCard = {
   current_price: number;
   auction_end: string;
   status: string;
+  image_url: string | null;
 };
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(value);
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+function formatRelative(value: string) {
+  const diffMs = new Date(value).getTime() - Date.now();
+  if (diffMs <= 0) return "Ended";
+  const minutes = Math.round(diffMs / 60000);
+  if (minutes < 60) return `${minutes}m left`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h left`;
+  const days = Math.round(hours / 24);
+  return `${days}d left`;
 }
 
 export default async function AuctionsPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("listings")
-    .select("id, title, category, current_price, auction_end, status")
+    .select("id, title, category, current_price, auction_end, status, image_url")
     .eq("status", "active")
     .order("auction_end", { ascending: true });
 
   const listings = (data ?? []) as ListingCard[];
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex items-center justify-between gap-4">
+    <main className="min-h-screen bg-stone-50 text-stone-900">
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            GoBidMe
+          </Link>
+          <Link
+            href="/create-listing"
+            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+          >
+            Sell an item
+          </Link>
+        </nav>
+      </header>
+
+      <section className="mx-auto max-w-6xl px-5 pb-16 pt-10 lg:px-8 lg:pt-14">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">GoBidMe</p>
-            <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Active Auctions</h1>
-            <p className="mt-2 text-sm text-slate-300">
-              Browse live GoBidMe listings and open each auction to view full details.
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Live auctions</h1>
+            <p className="mt-2 text-sm text-stone-500">
+              Browse listings from sellers around the community.
             </p>
           </div>
           <Link
             href="/"
-            className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/40 hover:bg-white/5"
+            className="hidden text-sm font-medium text-stone-600 transition hover:text-stone-900 sm:inline"
           >
-            Back Home
+            ← Home
           </Link>
         </div>
 
         {error ? (
-          <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          <div className="rounded-3xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-700">
             Could not load auctions: {error.message}
-          </p>
-        ) : null}
-
-        {listings.length === 0 && !error ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-8 text-slate-300">
-            No active auctions yet.
           </div>
         ) : null}
 
-        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {listings.length === 0 && !error ? (
+          <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+            No live auctions yet. Be the first to{" "}
+            <Link href="/create-listing" className="font-medium text-stone-900 underline">
+              create a listing
+            </Link>
+            .
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
             <Link
               key={listing.id}
               href={`/auctions/${listing.id}`}
-              className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/30"
+              className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
             >
-              <p className="text-xs uppercase tracking-wide text-slate-400">{listing.category}</p>
-              <h2 className="mt-3 line-clamp-2 text-lg font-semibold text-white">{listing.title}</h2>
-              <div className="mt-6 flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-slate-400">Current price</p>
-                  <p className="mt-1 text-2xl font-bold text-cyan-300">
-                    {formatPrice(listing.current_price)}
-                  </p>
-                </div>
-                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-300">
-                  {listing.status}
+              <div className="relative aspect-square w-full overflow-hidden bg-stone-100">
+                {listing.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={listing.image_url}
+                    alt={listing.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
+                    No image
+                  </div>
+                )}
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-stone-700 backdrop-blur">
+                  {listing.category}
                 </span>
               </div>
-              <p className="mt-4 text-sm text-slate-300">Ends: {formatDate(listing.auction_end)}</p>
+              <div className="p-4">
+                <h2 className="line-clamp-1 text-base font-medium text-stone-900">
+                  {listing.title}
+                </h2>
+                <div className="mt-3 flex items-end justify-between">
+                  <p className="text-lg font-semibold text-stone-900">
+                    {formatPrice(listing.current_price)}
+                  </p>
+                  <p className="text-xs font-medium text-stone-500">
+                    {formatRelative(listing.auction_end)}
+                  </p>
+                </div>
+              </div>
             </Link>
           ))}
-        </section>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

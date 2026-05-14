@@ -28,7 +28,7 @@ export default function SignupPage() {
     }
 
     setSuccessMessage(
-      "Account created. Check your email for the confirmation link, then log in."
+      "Account created. Check your email for the confirmation link, then sign in."
     );
     setEmail("");
     setPassword("");
@@ -36,65 +36,72 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12 text-slate-100">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/70 p-8 shadow-2xl shadow-black/40 backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">GoBidMe</p>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Create your GoBidMe account</h1>
-        <p className="mt-2 text-sm text-slate-300">
-          Join GoBidMe and start bidding on premium listings from trusted sellers.
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-stone-50 px-5 py-12 text-stone-900">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <Link href="/" className="text-xl font-semibold tracking-tight text-stone-900">
+            GoBidMe
+          </Link>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          <label className="block">
-            <span className="mb-2 block text-sm text-slate-300">Email</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2"
-              placeholder="you@example.com"
-            />
-          </label>
+        <div className="rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+          <p className="mt-2 text-sm text-stone-600">
+            Join GoBidMe to bid on rare items and list your own.
+          </p>
 
-          <label className="block">
-            <span className="mb-2 block text-sm text-slate-300">Password</span>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2"
-              placeholder="At least 6 characters"
-            />
-          </label>
+          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-stone-700">Email</span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900"
+                placeholder="you@example.com"
+              />
+            </label>
 
-          {errorMessage ? (
-            <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-              {errorMessage}
-            </p>
-          ) : null}
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-stone-700">Password</span>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900"
+                placeholder="At least 6 characters"
+              />
+            </label>
 
-          {successMessage ? (
-            <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-              {successMessage}
-            </p>
-          ) : null}
+            {errorMessage ? (
+              <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {errorMessage}
+              </p>
+            ) : null}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Creating account..." : "Sign Up"}
-          </button>
-        </form>
+            {successMessage ? (
+              <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {successMessage}
+              </p>
+            ) : null}
 
-        <p className="mt-6 text-sm text-slate-300">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Creating account..." : "Create account"}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-stone-600">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">
-            Log in
+          <Link href="/login" className="font-medium text-stone-900 underline-offset-4 hover:underline">
+            Sign in
           </Link>
         </p>
       </div>

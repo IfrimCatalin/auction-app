@@ -3,40 +3,35 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Premium auctions for rare items",
+  title: "A marketplace for rare and beautiful things",
   description:
-    "GoBidMe brings collectors and sellers together—discover live auctions, place bids, and manage listings in one modern marketplace.",
+    "GoBidMe brings collectors and sellers together—discover live auctions, place bids, and manage listings in one elegant marketplace.",
 };
 
-const featuredAuctions = [
-  {
-    title: "Rolex Submariner 2024",
-    currentBid: "$12,800",
-    timeLeft: "2h 14m",
-    category: "Luxury Watches",
-  },
-  {
-    title: "Porsche 911 GT3 Model",
-    currentBid: "$3,200",
-    timeLeft: "6h 48m",
-    category: "Collectibles",
-  },
-  {
-    title: "Contemporary Art Piece",
-    currentBid: "$9,750",
-    timeLeft: "1d 3h",
-    category: "Art",
-  },
-];
+type FeaturedListing = {
+  id: string;
+  title: string;
+  category: string;
+  current_price: number;
+  image_url: string | null;
+};
 
 const categories = [
-  "Watches",
-  "Art",
-  "Cars",
-  "Sneakers",
-  "Tech",
-  "Memorabilia",
+  { name: "Watches", emoji: "⌚" },
+  { name: "Art", emoji: "🖼️" },
+  { name: "Cars", emoji: "🚗" },
+  { name: "Sneakers", emoji: "👟" },
+  { name: "Tech", emoji: "📱" },
+  { name: "Memorabilia", emoji: "🏆" },
 ];
+
+function formatPrice(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export default async function Home() {
   const supabase = await createClient();
@@ -45,152 +40,166 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(user);
 
+  const { data: listingsData } = await supabase
+    .from("listings")
+    .select("id, title, category, current_price, image_url")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  const featured = (listingsData ?? []) as FeaturedListing[];
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-fuchsia-600/20 blur-3xl" />
-          <div className="absolute right-0 top-44 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-        </div>
+    <main className="min-h-screen bg-stone-50 text-stone-900">
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            GoBidMe
+          </Link>
+          <ul className="hidden items-center gap-7 text-sm text-stone-600 md:flex">
+            <li>
+              <Link href="/auctions" className="transition hover:text-stone-900">
+                Auctions
+              </Link>
+            </li>
+            <li>
+              <Link href="/auctions" className="transition hover:text-stone-900">
+                Categories
+              </Link>
+            </li>
+            <li>
+              <Link href="/create-listing" className="transition hover:text-stone-900">
+                Sell
+              </Link>
+            </li>
+          </ul>
+          <Link
+            href={isAuthenticated ? "/dashboard" : "/login"}
+            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+          >
+            {isAuthenticated ? "Dashboard" : "Sign in"}
+          </Link>
+        </nav>
+      </header>
 
-        <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/70 backdrop-blur">
-          <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
-              <span className="text-lg font-semibold tracking-tight">GoBidMe</span>
-            </div>
-            <ul className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
-              <li>
-                <Link href="/auctions" className="hover:text-white">
-                  Auctions
-                </Link>
-              </li>
-              <li>Categories</li>
-              <li>How it Works</li>
-              <li>Sellers</li>
-            </ul>
+      <section className="mx-auto max-w-6xl px-5 pb-16 pt-12 md:pt-20 lg:px-8 lg:pt-24">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium text-stone-500">A community for collectors</p>
+          <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-stone-900 sm:text-5xl md:text-6xl lg:text-7xl">
+            Rare finds.
+            <br />
+            <span className="text-stone-500">Honest bids.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-base text-stone-600 sm:text-lg">
+            GoBidMe is the calm, image-first marketplace for trusted sellers and serious buyers.
+            Discover beautiful objects and place a bid in seconds.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href={isAuthenticated ? "/dashboard" : "/login"}
-              className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/30 hover:bg-white/5"
+              href={isAuthenticated ? "/auctions" : "/signup"}
+              className="rounded-full bg-stone-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
             >
-              {isAuthenticated ? "Dashboard" : "Sign In"}
+              Start bidding
             </Link>
-          </nav>
-        </header>
-
-        <section className="mx-auto max-w-7xl px-6 pb-20 pt-16 lg:px-8 lg:pt-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-400/10 px-4 py-1 text-xs font-semibold tracking-wide text-cyan-300">
-                GoBidMe Marketplace
-              </p>
-              <h1 className="mt-6 text-4xl font-semibold leading-tight text-white sm:text-5xl lg:text-6xl">
-                Discover rare items on GoBidMe and bid with confidence.
-              </h1>
-              <p className="mt-6 max-w-xl text-base text-slate-300 sm:text-lg">
-                GoBidMe connects serious buyers with trusted sellers in a sleek, secure auction
-                experience designed for high-value products.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href={isAuthenticated ? "/auctions" : "/signup"}
-                  className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-                >
-                  Start Bidding
-                </Link>
-                <Link
-                  href="/auctions"
-                  className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/5"
-                >
-                  Explore Auctions
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/30 backdrop-blur">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-300">Live Highlight</p>
-                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-medium text-emerald-300">
-                  Live
-                </span>
-              </div>
-              <h2 className="mt-4 text-2xl font-semibold text-white">Audemars Piguet Royal Oak</h2>
-              <p className="mt-2 text-sm text-slate-300">Current bid</p>
-              <p className="mt-1 text-4xl font-bold text-cyan-300">$48,500</p>
-              <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Time Left</p>
-                  <p className="mt-1 font-semibold">00:38:14</p>
-                </div>
-                <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-200">
-                  Place Bid
-                </button>
-              </div>
-            </div>
+            <Link
+              href="/auctions"
+              className="rounded-full border border-stone-300 bg-white px-6 py-3 text-sm font-medium text-stone-900 transition hover:bg-stone-100"
+            >
+              Browse auctions
+            </Link>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
-      <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <h3 className="text-2xl font-semibold text-white sm:text-3xl">Featured Auctions</h3>
-          <Link href="/dashboard" className="text-sm font-medium text-cyan-300 hover:text-cyan-200">
-            View all
+      <section className="mx-auto max-w-6xl px-5 pb-16 lg:px-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Featured listings</h2>
+            <p className="mt-1 text-sm text-stone-500">Fresh items from sellers this week.</p>
+          </div>
+          <Link
+            href="/auctions"
+            className="hidden text-sm font-medium text-stone-900 underline-offset-4 hover:underline sm:inline"
+          >
+            See all
           </Link>
         </div>
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {featuredAuctions.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 transition hover:-translate-y-0.5 hover:border-cyan-300/30"
+
+        {featured.length === 0 ? (
+          <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+            No live listings yet. Be the first to{" "}
+            <Link href="/create-listing" className="font-medium text-stone-900 underline">
+              create one
+            </Link>
+            .
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((item) => (
+              <Link
+                key={item.id}
+                href={`/auctions/${item.id}`}
+                className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
+              >
+                <div className="aspect-square w-full overflow-hidden bg-stone-100">
+                  {item.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.image_url}
+                      alt={item.title}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
+                      No image
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-xs uppercase tracking-wide text-stone-500">{item.category}</p>
+                  <h3 className="mt-1 line-clamp-1 text-base font-medium text-stone-900">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 text-lg font-semibold text-stone-900">
+                    {formatPrice(item.current_price)}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 pb-20 lg:px-8">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Browse by category</h2>
+        <p className="mt-1 text-sm text-stone-500">Curated by the GoBidMe community.</p>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {categories.map((category) => (
+            <Link
+              key={category.name}
+              href="/auctions"
+              className="flex flex-col items-start gap-2 rounded-2xl border border-stone-200 bg-white p-4 transition hover:border-stone-300 hover:shadow-sm"
             >
-              <p className="text-xs uppercase tracking-wide text-slate-400">{item.category}</p>
-              <h4 className="mt-3 text-lg font-semibold text-white">{item.title}</h4>
-              <div className="mt-6 flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-slate-400">Current bid</p>
-                  <p className="mt-1 text-2xl font-bold text-cyan-300">{item.currentBid}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-400">Ends in</p>
-                  <p className="mt-1 font-medium text-slate-200">{item.timeLeft}</p>
-                </div>
-              </div>
-            </article>
+              <span className="text-2xl" aria-hidden>
+                {category.emoji}
+              </span>
+              <span className="text-sm font-medium text-stone-900">{category.name}</span>
+            </Link>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 pb-20 lg:px-8">
-        <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-8">
-          <h3 className="text-2xl font-semibold text-white sm:text-3xl">Browse by Category</h3>
-          <p className="mt-3 max-w-2xl text-slate-300">
-            Jump into curated categories and discover listings from verified sellers.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className="rounded-xl border border-white/10 bg-slate-950/60 px-5 py-4 text-left font-medium text-slate-100 transition hover:border-cyan-300/40 hover:bg-slate-950"
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-4 px-6 text-sm text-slate-400 sm:flex-row sm:items-center lg:px-8">
-          <p>© {new Date().getFullYear()} GoBidMe. All rights reserved.</p>
+      <footer className="border-t border-stone-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-5 py-8 text-sm text-stone-500 sm:flex-row sm:items-center lg:px-8">
+          <p>© {new Date().getFullYear()} GoBidMe</p>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-slate-200">
+            <a href="#" className="transition hover:text-stone-900">
               Terms
             </a>
-            <a href="#" className="hover:text-slate-200">
+            <a href="#" className="transition hover:text-stone-900">
               Privacy
             </a>
-            <a href="#" className="hover:text-slate-200">
+            <a href="#" className="transition hover:text-stone-900">
               Contact
             </a>
           </div>

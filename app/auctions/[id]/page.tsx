@@ -34,6 +34,7 @@ type ListingDetails = {
   status: string;
   seller_id: string;
   created_at: string;
+  image_url: string | null;
 };
 
 function formatPrice(value: number) {
@@ -64,7 +65,7 @@ export default async function AuctionDetailsPage({
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, category, starting_price, current_price, auction_end, status, seller_id, created_at"
+      "id, title, description, category, starting_price, current_price, auction_end, status, seller_id, created_at, image_url"
     )
     .eq("id", id)
     .single();
@@ -76,76 +77,124 @@ export default async function AuctionDetailsPage({
   const listing = data as ListingDetails;
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-100 lg:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6">
-          <Link href="/auctions" className="text-sm font-medium text-cyan-300 hover:text-cyan-200">
-            ← Back to auctions
+    <main className="min-h-screen bg-stone-50 text-stone-900">
+      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            GoBidMe
           </Link>
-        </div>
+          <Link
+            href="/auctions"
+            className="text-sm font-medium text-stone-600 transition hover:text-stone-900"
+          >
+            ← All auctions
+          </Link>
+        </nav>
+      </header>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 lg:col-span-2">
-            <p className="text-xs uppercase tracking-wide text-slate-400">{listing.category}</p>
-            <h1 className="mt-3 text-3xl font-semibold text-white">{listing.title}</h1>
-            <p className="mt-4 whitespace-pre-wrap text-slate-300">{listing.description}</p>
-
-            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs text-slate-400">Starting Price</p>
-                <p className="mt-2 text-xl font-semibold text-white">
-                  {formatPrice(listing.starting_price)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs text-slate-400">Current Price</p>
-                <p className="mt-2 text-xl font-semibold text-cyan-300">
-                  {formatPrice(listing.current_price)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs text-slate-400">Auction End</p>
-                <p className="mt-2 text-sm font-medium text-slate-200">{formatDate(listing.auction_end)}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs text-slate-400">Status</p>
-                <p className="mt-2 text-sm font-medium uppercase tracking-wide text-emerald-300">
-                  {listing.status}
-                </p>
+      <section className="mx-auto max-w-6xl px-5 py-10 lg:px-8 lg:py-14">
+        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
+              <div className="aspect-square w-full overflow-hidden bg-stone-100">
+                {listing.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={listing.image_url}
+                    alt={listing.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-sm text-stone-400">
+                    No image provided
+                  </div>
+                )}
               </div>
             </div>
-          </section>
 
-          <aside className="rounded-2xl border border-white/10 bg-slate-900/70 p-6">
-            <h2 className="text-xl font-semibold text-white">Place Bid</h2>
-            <p className="mt-2 text-sm text-slate-300">Current highest bid: {formatPrice(listing.current_price)}</p>
+            <div className="rounded-3xl border border-stone-200 bg-white p-6">
+              <p className="text-xs uppercase tracking-wide text-stone-500">{listing.category}</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+                {listing.title}
+              </h1>
+              <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-700">
+                {listing.description}
+              </p>
 
-            {!user ? (
-              <div className="mt-5 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300">
-                You must be signed in to place a bid.{" "}
-                <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">
-                  Sign in
-                </Link>
+              <dl className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Starting price
+                  </dt>
+                  <dd className="mt-1 text-base font-semibold text-stone-900">
+                    {formatPrice(listing.starting_price)}
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Auction end
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium text-stone-900">
+                    {formatDate(listing.auction_end)}
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Status
+                  </dt>
+                  <dd className="mt-1 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                    {listing.status}
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Listed
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium text-stone-900">
+                    {formatDate(listing.created_at)}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-3xl border border-stone-200 bg-white p-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                Current bid
+              </p>
+              <p className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
+                {formatPrice(listing.current_price)}
+              </p>
+
+              {!user ? (
+                <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
+                  You need to be signed in to place a bid.{" "}
+                  <Link
+                    href="/login"
+                    className="font-medium text-stone-900 underline-offset-4 hover:underline"
+                  >
+                    Sign in
+                  </Link>
+                </div>
+              ) : (
+                <BidForm
+                  listingId={listing.id}
+                  currentPrice={listing.current_price}
+                  sellerId={listing.seller_id}
+                  auctionEnd={listing.auction_end}
+                  bidderId={user.id}
+                  listingStatus={listing.status}
+                />
+              )}
+
+              <div className="mt-6 border-t border-stone-200 pt-4 text-xs text-stone-500">
+                Seller ID · <span className="font-mono">{listing.seller_id.slice(0, 8)}…</span>
               </div>
-            ) : (
-              <BidForm
-                listingId={listing.id}
-                currentPrice={listing.current_price}
-                sellerId={listing.seller_id}
-                auctionEnd={listing.auction_end}
-                bidderId={user.id}
-                listingStatus={listing.status}
-              />
-            )}
-
-            <div className="mt-8 space-y-2 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-xs text-slate-400">
-              <p>Listing ID: {listing.id}</p>
-              <p>Seller ID: {listing.seller_id}</p>
-              <p>Created: {formatDate(listing.created_at)}</p>
             </div>
           </aside>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

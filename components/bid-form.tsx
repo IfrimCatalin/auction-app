@@ -22,7 +22,7 @@ function friendlyBidError(raw: string): string {
     return "This auction has ended—bidding is closed.";
   }
   if (lower.includes("not active")) {
-    return "This listing is not accepting bids right now.";
+    return "This listing isn’t accepting bids right now.";
   }
   if (lower.includes("does not exist")) {
     return "This listing could not be found.";
@@ -58,9 +58,9 @@ export function BidForm({
   const disabledReason = auctionEnded
     ? "Bidding is closed because this auction has ended."
     : isSeller
-      ? "You cannot bid on your own listing."
+      ? "You can’t bid on your own listing."
       : listingInactive
-        ? "This listing is not accepting bids right now."
+        ? "This listing isn’t accepting bids right now."
         : "";
 
   const minimumNext = useMemo(() => (currentPrice + 0.01).toFixed(2), [currentPrice]);
@@ -103,16 +103,16 @@ export function BidForm({
       text: `Your bid of ${new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
-      }).format(parsed)} was placed successfully.`,
+      }).format(parsed)} was placed.`,
     });
     setLoading(false);
     router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+    <form onSubmit={handleSubmit} className="mt-6 space-y-3">
       <label className="block">
-        <span className="mb-2 block text-sm text-slate-300">Bid amount (USD)</span>
+        <span className="mb-2 block text-sm font-medium text-stone-700">Your bid (USD)</span>
         <input
           type="number"
           required
@@ -122,12 +122,12 @@ export function BidForm({
           onChange={(e) => setAmount(e.target.value)}
           disabled={formDisabled || loading}
           placeholder={`Min. ${minimumNext}`}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none ring-cyan-300 transition placeholder:text-slate-500 focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900 disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-500"
         />
       </label>
 
       {formDisabled ? (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           {disabledReason}
         </p>
       ) : null}
@@ -136,8 +136,8 @@ export function BidForm({
         <p
           className={
             message.type === "error"
-              ? "rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
-              : "rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+              ? "rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+              : "rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
           }
         >
           {message.text}
@@ -147,9 +147,9 @@ export function BidForm({
       <button
         type="submit"
         disabled={formDisabled || loading}
-        className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Submitting…" : "Place bid"}
+        {loading ? "Placing bid…" : "Place bid"}
       </button>
     </form>
   );
