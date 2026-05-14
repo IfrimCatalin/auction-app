@@ -133,6 +133,8 @@ export default async function AuctionDetailsPage({
                 currentPrice={listing.current_price}
                 sellerId={listing.seller_id}
                 auctionEnd={listing.auction_end}
+                bidderId={user.id}
+                listingStatus={listing.status}
               />
             )}
 
