@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
+import { formatListingPrice, getListingDisplayPrice } from "@/lib/listing-price";
 import { ListingCover } from "@/components/listing-cover";
 import { LogoutButton } from "@/components/logout-button";
 import { MyListingActions } from "@/components/my-listing-actions";
@@ -27,16 +29,10 @@ type SellerListing = {
   status: string;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
-  bids: { count: number }[] | null;
+  bids: { amount: number }[] | null;
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+export const dynamic = "force-dynamic";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("en-US", {
@@ -46,7 +42,11 @@ function formatDate(value: string) {
 }
 
 function getBidCount(listing: SellerListing) {
-  return listing.bids?.[0]?.count ?? 0;
+  return listing.bids?.length ?? 0;
+}
+
+function getDisplayPrice(listing: SellerListing) {
+  return getListingDisplayPrice(listing.current_price, listing.bids);
 }
 
 function statusClass(status: string) {
@@ -57,6 +57,7 @@ function statusClass(status: string) {
 }
 
 export default async function MyListingsPage() {
+  noStore();
   const supabase = await createClient();
   const {
     data: { user },
@@ -69,7 +70,7 @@ export default async function MyListingsPage() {
   const { data, error } = await supabase
     .from("listings")
     .select(
-      `id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT}), bids(count)`
+      `id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT}), bids ( amount )`
     )
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false });
@@ -161,8 +162,11 @@ export default async function MyListingsPage() {
                         <h2 className="mt-0.5 line-clamp-2 text-base font-semibold text-ink">
                           {listing.title}
                         </h2>
-                        <p className="mt-2 text-lg font-semibold text-ink">
-                          {formatPrice(listing.current_price)}
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                          Current bid
+                        </p>
+                        <p className="mt-0.5 text-lg font-semibold tabular-nums text-ink">
+                          {formatListingPrice(getDisplayPrice(listing))}
                         </p>
                         <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted">
                           <div>
@@ -199,7 +203,7 @@ export default async function MyListingsPage() {
                   <thead className="border-b border-border bg-page-dark text-xs font-medium uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-5 py-4">Listing</th>
-                      <th className="px-5 py-4">Current price</th>
+                      <th className="px-5 py-4">Current bid</th>
                       <th className="px-5 py-4">Bids</th>
                       <th className="px-5 py-4">Auction end</th>
                       <th className="px-5 py-4">Status</th>
@@ -238,8 +242,8 @@ export default async function MyListingsPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4 font-semibold text-ink">
-                            {formatPrice(listing.current_price)}
+                          <td className="px-5 py-4 font-semibold tabular-nums text-ink">
+                            {formatListingPrice(getDisplayPrice(listing))}
                           </td>
                           <td className="px-5 py-4 text-ink/90">{getBidCount(listing)}</td>
                           <td className="px-5 py-4 text-ink/90">

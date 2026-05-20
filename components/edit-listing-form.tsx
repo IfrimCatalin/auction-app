@@ -3,18 +3,23 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { formatAuctionEndDisplay } from "@/lib/auction-duration";
 import {
   LISTING_STORAGE_BUCKET,
   LISTING_CATEGORY_OPTIONS,
   MAX_IMAGE_BYTES,
   MAX_LISTING_IMAGES,
   listingInputClass,
-  minDatetimeLocalValue,
-  toDatetimeLocalValue,
   validateEditListingFields,
 } from "@/lib/listing-form";
 import type { ListingImageRowWithId } from "@/lib/listing-images";
 import { removeStorageImagesByUrls } from "@/lib/storage-images";
+import {
+  hasListingReserve,
+  parseReservePriceForInsert,
+  validateReservePrice,
+  type ReserveMode,
+} from "@/lib/reserve-price";
 
 type PendingImage = {
   id: string;
@@ -31,22 +36,16 @@ type EditListingFormProps = {
     category: string;
     auctionEnd: string;
     startingPrice: number;
+    reservePrice: number | null;
+    bidCount: number;
     images: ListingImageRowWithId[];
   };
-};
-
-type FieldErrors = {
-  title?: string;
-  description?: string;
-  category?: string;
-  auctionEnd?: string;
 };
 
 type TouchedFields = {
   title?: boolean;
   description?: boolean;
   category?: boolean;
-  auctionEnd?: boolean;
 };
 
 function FieldError({ message }: { message?: string }) {
@@ -65,7 +64,13 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
   const [category, setCategory] = useState(initial.category);
-  const [auctionEnd, setAuctionEnd] = useState(toDatetimeLocalValue(initial.auctionEnd));
+  const [reserveMode, setReserveMode] = useState<ReserveMode>(
+    hasListingReserve(initial.reservePrice) ? "set" : "none"
+  );
+  const [reservePrice, setReservePrice] = useState(
+    initial.reservePrice != null ? String(initial.reservePrice) : ""
+  );
+  const reserveLocked = initial.bidCount > 0;
   const existingImages = useMemo(
     () => [...initial.images].sort((a, b) => a.sort_order - b.sort_order),
     [initial.images]
@@ -90,21 +95,26 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
         title,
         description,
         category,
-        auctionEnd,
       }),
-    [title, description, category, auctionEnd]
+    [title, description, category]
   );
+
+  const reserveError = useMemo(() => {
+    if (reserveLocked) return undefined;
+    return validateReservePrice(reserveMode, reservePrice, String(initial.startingPrice));
+  }, [reserveLocked, reserveMode, reservePrice, initial.startingPrice]);
 
   const imageCountError =
     totalImageCount > MAX_LISTING_IMAGES
       ? `You can have at most ${MAX_LISTING_IMAGES} images.`
       : undefined;
 
-  const isFormValid = Object.keys(fieldErrors).length === 0 && !imageCountError;
+  const isFormValid =
+    Object.keys(fieldErrors).length === 0 && !imageCountError && !reserveError;
   const submitDisabled = !isFormValid || loading;
 
-  const showError = (field: keyof FieldErrors) =>
-    (submitAttempted || touched[field]) && fieldErrors[field];
+  const showError = (field: keyof typeof fieldErrors) =>
+    (submitAttempted || touched[field as keyof TouchedFields]) && fieldErrors[field];
 
   const markTouched = (field: keyof TouchedFields) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -212,7 +222,6 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
       title,
       description,
       category,
-      auctionEnd,
     });
 
     if (Object.keys(errors).length > 0 || imageCountError) {
@@ -221,16 +230,27 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
 
     setLoading(true);
 
-    const auctionEndDate = new Date(auctionEnd);
+    const updatePayload: {
+      title: string;
+      description: string;
+      category: string;
+      reserve_price?: number | null;
+    } = {
+      title: title.trim(),
+      description: description.trim(),
+      category,
+    };
+
+    if (!reserveLocked) {
+      updatePayload.reserve_price = parseReservePriceForInsert(
+        reserveMode,
+        reservePrice
+      );
+    }
 
     const { error: updateError } = await supabase
       .from("listings")
-      .update({
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        auction_end: auctionEndDate.toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", listingId);
 
     if (updateError) {
@@ -269,8 +289,6 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
     router.push(`/auctions/${listingId}`);
     router.refresh();
   };
-
-  const minAuctionEnd = useMemo(() => minDatetimeLocalValue(), []);
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -423,19 +441,91 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
         </div>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block text-sm font-medium text-ink/90">Auction end</span>
-        <input
-          type="datetime-local"
-          value={auctionEnd}
-          min={minAuctionEnd}
-          onChange={(e) => setAuctionEnd(e.target.value)}
-          onBlur={() => markTouched("auctionEnd")}
-          className={listingInputClass(Boolean(showError("auctionEnd")))}
-        />
-        <FieldError message={showError("auctionEnd") || undefined} />
-        <p className="mt-1.5 text-xs text-muted">Must be a future date and time.</p>
-      </label>
+      <fieldset className="space-y-3">
+        <legend className="mb-2 block text-sm font-medium text-ink/90">Reserve price</legend>
+        {reserveLocked ? (
+          <div className="rounded-2xl border border-border bg-page px-4 py-3 text-sm text-muted">
+            {hasListingReserve(initial.reservePrice) ? (
+              <>
+                Reserve is set (amount hidden from buyers). It cannot be changed after
+                the first bid.
+              </>
+            ) : (
+              <>No reserve. It cannot be changed after the first bid.</>
+            )}
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-muted">No reserve listings usually get more bids.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label
+                className={`flex cursor-pointer flex-col rounded-2xl border p-4 transition ${
+                  reserveMode === "none"
+                    ? "border-accent bg-accent/10"
+                    : "border-border bg-page"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="edit-reserve-mode"
+                  checked={reserveMode === "none"}
+                  onChange={() => {
+                    setReserveMode("none");
+                    setReservePrice("");
+                  }}
+                  className="sr-only"
+                />
+                <span className="text-sm font-semibold text-ink">No reserve</span>
+                <span className="mt-1 text-xs text-accent">Recommended</span>
+              </label>
+              <label
+                className={`flex cursor-pointer flex-col rounded-2xl border p-4 transition ${
+                  reserveMode === "set"
+                    ? "border-accent bg-accent/10"
+                    : "border-border bg-page"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="edit-reserve-mode"
+                  checked={reserveMode === "set"}
+                  onChange={() => setReserveMode("set")}
+                  className="sr-only"
+                />
+                <span className="text-sm font-semibold text-ink">Set reserve price</span>
+              </label>
+            </div>
+            {reserveMode === "set" ? (
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted">
+                  Reserve price (USD)
+                </span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={reservePrice}
+                  onChange={(e) => setReservePrice(e.target.value)}
+                  className={listingInputClass(Boolean(reserveError))}
+                />
+                {reserveError ? (
+                  <FieldError message={reserveError} />
+                ) : null}
+              </label>
+            ) : null}
+          </>
+        )}
+      </fieldset>
+
+      <div className="block">
+        <span className="mb-2 block text-sm font-medium text-ink/90">Auction ends</span>
+        <div className="rounded-2xl border border-border bg-page px-4 py-3 text-sm text-ink">
+          {formatAuctionEndDisplay(initial.auctionEnd)}
+          <p className="mt-1 text-xs text-muted">
+            Duration cannot be changed after the listing is published.
+          </p>
+        </div>
+      </div>
 
       {formError ? (
         <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">

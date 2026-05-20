@@ -1,9 +1,35 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ListingReserveStatus } from "@/lib/reserve-price";
+
+/**
+ * Tiered minimum bid increment by current listing price.
+ * Must stay in sync with public.get_bid_increment() in Supabase.
+ */
+export function getBidIncrementForPrice(currentPrice: number): number {
+  if (currentPrice < 100) return 5;
+  if (currentPrice < 500) return 10;
+  if (currentPrice < 1000) return 25;
+  if (currentPrice < 5000) return 50;
+  return 100;
+}
+
+export function getMinimumBidAmount(currentPrice: number) {
+  return currentPrice + getBidIncrementForPrice(currentPrice);
+}
+
+export function formatBidAmount(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
 export type BidHistoryEntry = {
   id: string;
   amount: number;
   created_at: string;
+  bidder_id: string;
   bidderLabel: string;
 };
 
@@ -30,6 +56,49 @@ export function getBidderDisplayLabel(
   if (fullName) return fullName;
 
   return "Bidder";
+}
+
+/** Bid history: username only — never email or full name. */
+export function getBidHistoryBidderLabel(
+  profile: Pick<BidderProfile, "username"> | null | undefined
+) {
+  const username = profile?.username?.trim();
+  if (username) return `@${username}`;
+  return "Bidder";
+}
+
+export function getWinningBid(bids: BidHistoryEntry[]): BidHistoryEntry | null {
+  if (bids.length === 0) return null;
+  return bids.reduce((best, bid) => {
+    if (bid.amount > best.amount) return bid;
+    if (bid.amount === best.amount) {
+      return new Date(bid.created_at).getTime() > new Date(best.created_at).getTime()
+        ? bid
+        : best;
+    }
+    return best;
+  }, bids[0]);
+}
+
+/** Highest bid counts as winner only when reserve is met or there is no reserve. */
+export function getAuctionWinner(
+  bids: BidHistoryEntry[],
+  reserveStatus: ListingReserveStatus,
+  isEnded: boolean
+): BidHistoryEntry | null {
+  if (!isEnded) return null;
+  if (reserveStatus === "reserve_not_met") return null;
+  return getWinningBid(bids);
+}
+
+export function formatBidPlacedAt(value: string) {
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function formatBidTimestamp(value: string) {
@@ -85,6 +154,7 @@ export async function getListingBidHistory(
     id: bid.id,
     amount: bid.amount,
     created_at: bid.created_at,
-    bidderLabel: getBidderDisplayLabel(profileById.get(bid.bidder_id)),
+    bidder_id: bid.bidder_id,
+    bidderLabel: getBidHistoryBidderLabel(profileById.get(bid.bidder_id)),
   }));
 }

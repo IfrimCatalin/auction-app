@@ -2,22 +2,24 @@ import type { Metadata } from "next";
 import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BidForm } from "@/components/bid-form";
-import { BidHistory } from "@/components/bid-history";
 import { getListingBidHistory } from "@/lib/bids";
+import { ListingAuctionSidebar } from "@/components/listing-auction-sidebar";
 import { ListingImageGallery } from "@/components/listing-image-gallery";
-import { SellerListingActions } from "@/components/seller-listing-actions";
 import {
   getGalleryImageUrls,
   LISTING_IMAGES_SELECT,
   type ListingImageRow,
 } from "@/lib/listing-images";
-import { ProfileAvatar } from "@/components/profile-avatar";
 import { getProfileById } from "@/lib/profile-server";
 import { getProfileDisplayName } from "@/lib/profiles";
-import { FavoriteButton } from "@/components/favorite-button";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
+import { expirePastDueListings } from "@/lib/expire-listings";
+import { getListingReserveStatus } from "@/lib/reserve-price";
+import { getListingReviewByReviewer } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/server";
+import { ListingVisibilityBadge } from "@/components/listing-visibility-badge";
+import { ListingReserveBadge } from "@/components/listing-reserve-badge";
+import { inferListingVisibility } from "@/lib/listing-visibility";
 
 export async function generateMetadata({
   params,
@@ -49,6 +51,7 @@ type ListingDetails = {
   status: string;
   seller_id: string;
   created_at: string;
+  reserve_price: number | null;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
 };
@@ -78,10 +81,12 @@ export default async function AuctionDetailsPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  await expirePastDueListings(supabase);
+
   const { data, error } = await supabase
     .from("listings")
     .select(
-      `id, title, description, category, starting_price, current_price, auction_end, status, seller_id, created_at, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+      `id, title, description, category, starting_price, current_price, auction_end, status, reserve_price, seller_id, created_at, image_url, listing_images (${LISTING_IMAGES_SELECT})`
     )
     .eq("id", id)
     .single();
@@ -98,6 +103,14 @@ export default async function AuctionDetailsPage({
   const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
   const isFavorited = isListingFavorited(favoritedIds, listing.id);
   const bidHistory = await getListingBidHistory(supabase, listing.id);
+  const visibility = inferListingVisibility(listing.created_at, listing.auction_end);
+  const reserveStatus = getListingReserveStatus(
+    listing.reserve_price,
+    listing.current_price
+  );
+  const existingReview = user
+    ? await getListingReviewByReviewer(supabase, listing.id, user.id)
+    : null;
 
   return (
     <main className="min-h-screen bg-page text-ink">
@@ -119,7 +132,11 @@ export default async function AuctionDetailsPage({
             <ListingImageGallery images={galleryUrls} title={listing.title} />
 
             <div className="rounded-3xl border border-border bg-surface p-6">
-              <p className="text-xs uppercase tracking-wide text-muted">{listing.category}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs uppercase tracking-wide text-muted">{listing.category}</p>
+                <ListingVisibilityBadge visibility={visibility} size="md" />
+                <ListingReserveBadge status={reserveStatus} size="md" />
+              </div>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {listing.title}
               </h1>
@@ -148,8 +165,18 @@ export default async function AuctionDetailsPage({
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Status
                   </dt>
-                  <dd className="mt-1 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-                    {listing.status}
+                  <dd className="mt-1">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                        listing.status === "ended"
+                          ? "bg-page-dark text-muted"
+                          : listing.status === "active"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-page-dark text-ink/90"
+                      }`}
+                    >
+                      {listing.status}
+                    </span>
                   </dd>
                 </div>
                 <div className="rounded-2xl border border-border bg-page p-4">
@@ -165,73 +192,23 @@ export default async function AuctionDetailsPage({
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-3xl border border-border bg-surface p-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Current bid
-                  </p>
-                  <p className="mt-1 text-4xl font-semibold tracking-tight text-ink">
-                    {formatPrice(listing.current_price)}
-                  </p>
-                </div>
-                {!isSeller ? (
-                  <FavoriteButton
-                    listingId={listing.id}
-                    initialFavorited={isFavorited}
-                    isAuthenticated={Boolean(user)}
-                    userId={user?.id}
-                    isOwner={isSeller}
-                    variant="detail"
-                  />
-                ) : null}
-              </div>
-
-              {isSeller ? (
-                <SellerListingActions
-                  listingId={listing.id}
-                  listingTitle={listing.title}
-                  imageUrls={galleryUrls}
-                />
-              ) : !user ? (
-                <div className="mt-6 rounded-2xl border border-border bg-page p-4 text-sm text-muted">
-                  You need to be signed in to place a bid.{" "}
-                  <Link
-                    href="/login"
-                    className="font-medium text-ink underline-offset-4 hover:underline"
-                  >
-                    Sign in
-                  </Link>
-                </div>
-              ) : (
-                <BidForm
-                  listingId={listing.id}
-                  currentPrice={listing.current_price}
-                  sellerId={listing.seller_id}
-                  auctionEnd={listing.auction_end}
-                  bidderId={user.id}
-                  listingStatus={listing.status}
-                />
-              )}
-
-              <BidHistory bids={bidHistory} />
-
-              <Link
-                href={`/seller/${listing.seller_id}`}
-                className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-page p-4 transition hover:border-accent/40 hover:bg-page-dark"
-              >
-                <ProfileAvatar profile={sellerProfile} size="sm" />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Sold by
-                  </p>
-                  <p className="truncate text-sm font-semibold text-ink">{sellerName}</p>
-                  {sellerProfile?.username ? (
-                    <p className="truncate text-xs text-muted">@{sellerProfile.username}</p>
-                  ) : null}
-                </div>
-              </Link>
-            </div>
+            <ListingAuctionSidebar
+              listingId={listing.id}
+              listingTitle={listing.title}
+              currentPrice={listing.current_price}
+              auctionEnd={listing.auction_end}
+              listingStatus={listing.status}
+              sellerId={listing.seller_id}
+              sellerName={sellerName}
+              sellerProfile={sellerProfile}
+              isSeller={isSeller}
+              user={user}
+              isFavorited={isFavorited}
+              bidHistory={bidHistory}
+              imageUrls={galleryUrls}
+              reserveStatus={reserveStatus}
+              existingReview={existingReview}
+            />
           </aside>
         </div>
       </section>

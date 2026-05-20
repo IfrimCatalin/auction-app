@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { GobidMeLogo } from "@/components/gobidme-logo";
 import { redirect } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
+import { formatListingPrice, getListingDisplayPrice } from "@/lib/listing-price";
 import { ListingCover } from "@/components/listing-cover";
 import { LogoutButton } from "@/components/logout-button";
 import {
@@ -12,6 +14,8 @@ import { getWatchlistCount } from "@/lib/favorites";
 import { getUnreadNotificationCount } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 type MyListing = {
   id: string;
   title: string;
@@ -20,17 +24,11 @@ type MyListing = {
   status: string;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
+  bids: { amount: number }[] | null;
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export default async function DashboardPage() {
+  noStore();
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,7 +41,7 @@ export default async function DashboardPage() {
   const { data: listingsData } = await supabase
     .from("listings")
     .select(
-      `id, title, category, current_price, status, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+      `id, title, category, current_price, status, image_url, listing_images (${LISTING_IMAGES_SELECT}), bids ( amount )`
     )
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false })
@@ -167,6 +165,10 @@ export default async function DashboardPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {myListings.map((listing) => {
                 const coverUrl = getCoverImageUrl(listing.image_url, listing.listing_images);
+                const displayPrice = getListingDisplayPrice(
+                  listing.current_price,
+                  listing.bids
+                );
 
                 return (
                 <Link
@@ -188,10 +190,15 @@ export default async function DashboardPage() {
                     <h3 className="mt-1 line-clamp-1 text-base font-medium text-ink">
                       {listing.title}
                     </h3>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-lg font-semibold text-ink">
-                        {formatPrice(listing.current_price)}
-                      </p>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                          Current bid
+                        </p>
+                        <p className="text-lg font-semibold tabular-nums text-ink">
+                          {formatListingPrice(displayPrice)}
+                        </p>
+                      </div>
                       <span className="rounded-full bg-page-dark px-3 py-1 text-[11px] font-medium text-ink/90">
                         {listing.status}
                       </span>

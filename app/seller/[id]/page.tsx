@@ -7,7 +7,11 @@ import { SellerListingsGrid, type SellerListingCard } from "@/components/seller-
 import { LISTING_IMAGES_SELECT } from "@/lib/listing-images";
 import { getProfileById } from "@/lib/profile-server";
 import { getProfileDisplayName } from "@/lib/profiles";
+import { expirePastDueListings } from "@/lib/expire-listings";
 import { createClient } from "@/lib/supabase/server";
+import { SellerReviewsSection } from "@/components/seller-reviews-section";
+import { StarRating } from "@/components/star-rating";
+import { getSellerRatingSummary, getSellerReviews } from "@/lib/reviews";
 
 export async function generateMetadata({
   params,
@@ -38,6 +42,8 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const profile = await getProfileById(supabase, id);
   const displayName = getProfileDisplayName(profile, "GoBidMe seller");
 
+  await expirePastDueListings(supabase);
+
   const { data: listingsData } = await supabase
     .from("listings")
     .select(
@@ -45,9 +51,12 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
     )
     .eq("seller_id", id)
     .eq("status", "active")
+    .gt("auction_end", new Date().toISOString())
     .order("created_at", { ascending: false });
 
   const listings = (listingsData ?? []) as SellerListingCard[];
+  const ratingSummary = await getSellerRatingSummary(supabase, id);
+  const recentReviews = await getSellerReviews(supabase, id, 8);
 
   return (
     <main className="min-h-screen bg-page text-ink">
@@ -75,6 +84,17 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
               {profile?.username ? (
                 <p className="mt-1 text-sm text-muted">@{profile.username}</p>
               ) : null}
+              {ratingSummary.reviewCount > 0 && ratingSummary.averageRating != null ? (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <StarRating rating={ratingSummary.averageRating} size="md" showValue />
+                  <span className="text-sm text-muted">
+                    {ratingSummary.reviewCount} review
+                    {ratingSummary.reviewCount === 1 ? "" : "s"}
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-muted">No reviews yet</p>
+              )}
               {profile?.location ? (
                 <p className="mt-3 text-sm text-muted">{profile.location}</p>
               ) : null}
@@ -90,6 +110,8 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
         </div>
+
+        <SellerReviewsSection summary={ratingSummary} reviews={recentReviews} />
 
         <div className="mt-10">
           <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Active listings</h2>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { AuctionListingCard } from "@/components/auction-listing-card";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
+import { expirePastDueListings } from "@/lib/expire-listings";
+import { getListingReserveStatus, type ListingReserveStatus } from "@/lib/reserve-price";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -18,8 +20,12 @@ type FeaturedListing = {
   title: string;
   category: string;
   current_price: number;
+  created_at: string;
+  auction_end: string;
+  reserve_price: number | null;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
+  reserveStatus: ListingReserveStatus;
 };
 
 const categories = [
@@ -38,16 +44,22 @@ export default async function Home() {
   } = await supabase.auth.getUser();
   const isAuthenticated = Boolean(user);
 
+  await expirePastDueListings(supabase);
+
   const { data: listingsData } = await supabase
     .from("listings")
     .select(
-      `id, seller_id, title, category, current_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+      `id, seller_id, title, category, current_price, created_at, auction_end, reserve_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
     )
     .eq("status", "active")
+    .gt("auction_end", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(6);
 
-  const featured = (listingsData ?? []) as FeaturedListing[];
+  const featured = ((listingsData ?? []) as FeaturedListing[]).map((listing) => ({
+    ...listing,
+    reserveStatus: getListingReserveStatus(listing.reserve_price, listing.current_price),
+  }));
   const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
 
   return (

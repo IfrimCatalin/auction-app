@@ -32,12 +32,24 @@ export function minDatetimeLocalValue(): string {
   return `${nextMinute.getFullYear()}-${pad(nextMinute.getMonth() + 1)}-${pad(nextMinute.getDate())}T${pad(nextMinute.getHours())}:${pad(nextMinute.getMinutes())}`;
 }
 
+import {
+  getAuctionDurationPreset,
+  isDurationSelectable,
+  type AuctionDurationId,
+} from "@/lib/auction-duration";
+
+import {
+  validateReservePrice,
+  type ReserveMode,
+} from "@/lib/reserve-price";
+
 export type ListingFieldErrors = {
   title?: string;
   description?: string;
   category?: string;
   startingPrice?: string;
-  auctionEnd?: string;
+  reservePrice?: string;
+  auctionDuration?: string;
 };
 
 export function validateCreateListingFields(values: {
@@ -45,7 +57,9 @@ export function validateCreateListingFields(values: {
   description: string;
   category: string;
   startingPrice: string;
-  auctionEnd: string;
+  reserveMode: ReserveMode;
+  reservePrice: string;
+  auctionDuration: string;
 }): ListingFieldErrors {
   const errors: ListingFieldErrors = {};
 
@@ -71,9 +85,18 @@ export function validateCreateListingFields(values: {
     errors.startingPrice = "Starting price must be greater than 0.";
   }
 
-  const auctionEndError = validateAuctionEnd(values.auctionEnd);
-  if (auctionEndError) {
-    errors.auctionEnd = auctionEndError;
+  const reserveError = validateReservePrice(
+    values.reserveMode,
+    values.reservePrice,
+    values.startingPrice
+  );
+  if (reserveError) {
+    errors.reservePrice = reserveError;
+  }
+
+  const durationError = validateAuctionDuration(values.auctionDuration);
+  if (durationError) {
+    errors.auctionDuration = durationError;
   }
 
   return errors;
@@ -83,7 +106,6 @@ export function validateEditListingFields(values: {
   title: string;
   description: string;
   category: string;
-  auctionEnd: string;
 }): ListingFieldErrors {
   const errors: ListingFieldErrors = {};
 
@@ -99,28 +121,26 @@ export function validateEditListingFields(values: {
     errors.category = "Please select a category.";
   }
 
-  const auctionEndError = validateAuctionEnd(values.auctionEnd);
-  if (auctionEndError) {
-    errors.auctionEnd = auctionEndError;
-  }
-
   return errors;
 }
 
-function validateAuctionEnd(auctionEnd: string): string | undefined {
-  const endRaw = auctionEnd.trim();
-  if (!endRaw) {
-    return "Auction end date is required.";
+function validateAuctionDuration(durationId: string): string | undefined {
+  if (!durationId.trim()) {
+    return "Please select an auction duration.";
   }
 
-  const auctionEndDate = new Date(endRaw);
-  if (Number.isNaN(auctionEndDate.getTime())) {
-    return "Enter a valid date and time.";
+  const preset = getAuctionDurationPreset(durationId);
+  if (!preset) {
+    return "Please select a valid auction duration.";
   }
 
-  if (auctionEndDate.getTime() <= Date.now()) {
-    return "Auction end must be in the future.";
+  if (!isDurationSelectable(preset)) {
+    return `${preset.label} requires payment before publishing.`;
   }
 
   return undefined;
+}
+
+export function isAuctionDurationId(value: string): value is AuctionDurationId {
+  return getAuctionDurationPreset(value) !== undefined;
 }

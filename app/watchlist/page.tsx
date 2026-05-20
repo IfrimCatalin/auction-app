@@ -6,6 +6,7 @@ import { AuctionListingCard } from "@/components/auction-listing-card";
 import { LogoutButton } from "@/components/logout-button";
 import { isListingFavorited } from "@/lib/favorites";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
+import { getListingReserveStatus, type ListingReserveStatus } from "@/lib/reserve-price";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -19,10 +20,13 @@ type WatchlistListing = {
   title: string;
   category: string;
   current_price: number;
+  created_at: string;
   auction_end: string;
   status: string;
+  reserve_price: number | null;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
+  reserveStatus: ListingReserveStatus;
 };
 
 export default async function WatchlistPage() {
@@ -50,7 +54,7 @@ export default async function WatchlistPage() {
     const { data: listingsData, error } = await supabase
       .from("listings")
       .select(
-        `id, seller_id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+        `id, seller_id, title, category, current_price, created_at, auction_end, status, reserve_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
       )
       .in("id", listingIds);
 
@@ -62,7 +66,14 @@ export default async function WatchlistPage() {
       );
       listings = listingIds
         .map((id) => byId.get(id))
-        .filter((listing): listing is WatchlistListing => listing !== undefined);
+        .filter((listing): listing is WatchlistListing => listing !== undefined)
+        .map((listing) => ({
+          ...listing,
+          reserveStatus: getListingReserveStatus(
+            listing.reserve_price,
+            listing.current_price
+          ),
+        }));
     }
   }
 

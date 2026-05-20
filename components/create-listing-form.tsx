@@ -2,18 +2,26 @@
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuctionDurationSelector } from "@/components/auction-duration-selector";
+import {
+  calculateAuctionEndFromDuration,
+  DEFAULT_AUCTION_DURATION_ID,
+  formatAuctionEndDisplay,
+  type AuctionDurationId,
+} from "@/lib/auction-duration";
+import {
+  LISTING_CATEGORY_OPTIONS,
+  validateCreateListingFields,
+  type ListingFieldErrors,
+} from "@/lib/listing-form";
+import {
+  parseReservePriceForInsert,
+  type ReserveMode,
+} from "@/lib/reserve-price";
 import { createClient } from "@/lib/supabase/client";
 
 type CreateListingFormProps = {
   sellerId: string;
-};
-
-type FieldErrors = {
-  title?: string;
-  description?: string;
-  category?: string;
-  startingPrice?: string;
-  auctionEnd?: string;
 };
 
 type TouchedFields = {
@@ -21,7 +29,8 @@ type TouchedFields = {
   description?: boolean;
   category?: boolean;
   startingPrice?: boolean;
-  auctionEnd?: boolean;
+  reservePrice?: boolean;
+  auctionDuration?: boolean;
 };
 
 type PendingImage = {
@@ -29,16 +38,6 @@ type PendingImage = {
   file: File;
   previewUrl: string;
 };
-
-const categoryOptions = [
-  "Watches",
-  "Art",
-  "Cars",
-  "Sneakers",
-  "Tech",
-  "Memorabilia",
-  "Other",
-];
 
 const STORAGE_BUCKET = "listing-images";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -51,52 +50,6 @@ function inputClass(hasError: boolean) {
   return hasError
     ? `${inputBaseClass} border-rose-400 focus:border-rose-500`
     : `${inputBaseClass} border-border`;
-}
-
-function validateForm(values: {
-  title: string;
-  description: string;
-  category: string;
-  startingPrice: string;
-  auctionEnd: string;
-}): FieldErrors {
-  const errors: FieldErrors = {};
-
-  if (!values.title.trim()) {
-    errors.title = "Title is required.";
-  }
-
-  if (!values.description.trim()) {
-    errors.description = "Description is required.";
-  }
-
-  if (!values.category || !categoryOptions.includes(values.category)) {
-    errors.category = "Please select a category.";
-  }
-
-  const priceRaw = values.startingPrice.trim();
-  const parsedPrice = Number(priceRaw);
-  if (!priceRaw) {
-    errors.startingPrice = "Starting price is required.";
-  } else if (!Number.isFinite(parsedPrice)) {
-    errors.startingPrice = "Enter a valid number.";
-  } else if (parsedPrice <= 0) {
-    errors.startingPrice = "Starting price must be greater than 0.";
-  }
-
-  const endRaw = values.auctionEnd.trim();
-  if (!endRaw) {
-    errors.auctionEnd = "Auction end date is required.";
-  } else {
-    const auctionEndDate = new Date(endRaw);
-    if (Number.isNaN(auctionEndDate.getTime())) {
-      errors.auctionEnd = "Enter a valid date and time.";
-    } else if (auctionEndDate.getTime() <= Date.now()) {
-      errors.auctionEnd = "Auction end must be in the future.";
-    }
-  }
-
-  return errors;
 }
 
 function FieldError({ message, id }: { message?: string; id?: string }) {
@@ -114,9 +67,13 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState(categoryOptions[0]);
+  const [category, setCategory] = useState<string>(LISTING_CATEGORY_OPTIONS[0]);
   const [startingPrice, setStartingPrice] = useState("");
-  const [auctionEnd, setAuctionEnd] = useState("");
+  const [reserveMode, setReserveMode] = useState<ReserveMode>("none");
+  const [reservePrice, setReservePrice] = useState("");
+  const [auctionDuration, setAuctionDuration] = useState<AuctionDurationId | "">(
+    DEFAULT_AUCTION_DURATION_ID
+  );
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -125,21 +82,32 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
 
   const fieldErrors = useMemo(
     () =>
-      validateForm({
+      validateCreateListingFields({
         title,
         description,
         category,
         startingPrice,
-        auctionEnd,
+        reserveMode,
+        reservePrice,
+        auctionDuration,
       }),
-    [title, description, category, startingPrice, auctionEnd]
+    [title, description, category, startingPrice, reserveMode, reservePrice, auctionDuration]
   );
+
+  const previewAuctionEnd = useMemo(() => {
+    if (!auctionDuration) return null;
+    try {
+      return calculateAuctionEndFromDuration(auctionDuration);
+    } catch {
+      return null;
+    }
+  }, [auctionDuration]);
 
   const isFormValid = Object.keys(fieldErrors).length === 0;
   const submitDisabled = !isFormValid || loading;
 
-  const showError = (field: keyof FieldErrors) =>
-    (submitAttempted || touched[field]) && fieldErrors[field];
+  const showError = (field: keyof ListingFieldErrors) =>
+    (submitAttempted || touched[field as keyof TouchedFields]) && fieldErrors[field];
 
   const markTouched = (field: keyof TouchedFields) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -235,12 +203,14 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     setFormError("");
     setSubmitAttempted(true);
 
-    const errors = validateForm({
+    const errors = validateCreateListingFields({
       title,
       description,
       category,
       startingPrice,
-      auctionEnd,
+      reserveMode,
+      reservePrice,
+      auctionDuration,
     });
 
     if (Object.keys(errors).length > 0) {
@@ -250,7 +220,9 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     setLoading(true);
 
     const parsedPrice = Number(startingPrice);
-    const auctionEndDate = new Date(auctionEnd);
+    const auctionEndIso = calculateAuctionEndFromDuration(
+      auctionDuration as AuctionDurationId
+    );
 
     const { data: listing, error: listingError } = await supabase
       .from("listings")
@@ -260,7 +232,8 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         category,
         starting_price: parsedPrice,
         current_price: parsedPrice,
-        auction_end: auctionEndDate.toISOString(),
+        auction_end: auctionEndIso,
+        reserve_price: parseReservePriceForInsert(reserveMode, reservePrice),
         status: "active",
         seller_id: sellerId,
         image_url: null,
@@ -294,12 +267,6 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     router.push("/dashboard");
     router.refresh();
   };
-
-  const minAuctionEnd = useMemo(() => {
-    const nextMinute = new Date(Date.now() + 60_000);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${nextMinute.getFullYear()}-${pad(nextMinute.getMonth() + 1)}-${pad(nextMinute.getDate())}T${pad(nextMinute.getHours())}:${pad(nextMinute.getMinutes())}`;
-  }, []);
 
   const coverPreview = pendingImages[0]?.previewUrl;
 
@@ -411,7 +378,7 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
             aria-invalid={Boolean(showError("category"))}
             className={inputClass(Boolean(showError("category")))}
           >
-            {categoryOptions.map((option) => (
+            {LISTING_CATEGORY_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -437,20 +404,87 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         </label>
       </div>
 
-      <label className="block">
-        <span className="mb-2 block text-sm font-medium text-ink/90">Auction end</span>
-        <input
-          type="datetime-local"
-          value={auctionEnd}
-          min={minAuctionEnd}
-          onChange={(event) => setAuctionEnd(event.target.value)}
-          onBlur={() => markTouched("auctionEnd")}
-          aria-invalid={Boolean(showError("auctionEnd"))}
-          className={inputClass(Boolean(showError("auctionEnd")))}
-        />
-        <FieldError message={showError("auctionEnd") || undefined} />
-        <p className="mt-1.5 text-xs text-muted">Must be a future date and time.</p>
-      </label>
+      <fieldset className="space-y-3">
+        <legend className="mb-2 block text-sm font-medium text-ink/90">Reserve price</legend>
+        <p className="text-xs text-muted">
+          No reserve listings usually get more bids.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label
+            className={`flex cursor-pointer flex-col rounded-2xl border p-4 transition ${
+              reserveMode === "none"
+                ? "border-accent bg-accent/10"
+                : "border-border bg-page hover:border-accent/30"
+            }`}
+          >
+            <input
+              type="radio"
+              name="reserve-mode"
+              value="none"
+              checked={reserveMode === "none"}
+              onChange={() => {
+                setReserveMode("none");
+                setReservePrice("");
+              }}
+              className="sr-only"
+            />
+            <span className="text-sm font-semibold text-ink">No reserve</span>
+            <span className="mt-1 text-xs text-accent">Recommended</span>
+          </label>
+          <label
+            className={`flex cursor-pointer flex-col rounded-2xl border p-4 transition ${
+              reserveMode === "set"
+                ? "border-accent bg-accent/10"
+                : "border-border bg-page hover:border-accent/30"
+            }`}
+          >
+            <input
+              type="radio"
+              name="reserve-mode"
+              value="set"
+              checked={reserveMode === "set"}
+              onChange={() => setReserveMode("set")}
+              className="sr-only"
+            />
+            <span className="text-sm font-semibold text-ink">Set reserve price</span>
+            <span className="mt-1 text-xs text-muted">Hidden from buyers</span>
+          </label>
+        </div>
+        {reserveMode === "set" ? (
+          <label className="block">
+            <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted">
+              Reserve price (USD)
+            </span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={reservePrice}
+              onChange={(event) => setReservePrice(event.target.value)}
+              onBlur={() => markTouched("reservePrice")}
+              aria-invalid={Boolean(showError("reservePrice"))}
+              className={inputClass(Boolean(showError("reservePrice")))}
+              placeholder="Must be above starting price"
+            />
+            <FieldError message={showError("reservePrice") || undefined} />
+          </label>
+        ) : null}
+      </fieldset>
+
+      <AuctionDurationSelector
+        value={auctionDuration}
+        onChange={setAuctionDuration}
+        onBlur={() => markTouched("auctionDuration")}
+        disabled={loading}
+        error={showError("auctionDuration") || undefined}
+      />
+
+      {previewAuctionEnd ? (
+        <p className="rounded-2xl border border-border bg-page px-4 py-3 text-sm text-muted">
+          Auction ends{" "}
+          <span className="font-medium text-ink">{formatAuctionEndDisplay(previewAuctionEnd)}</span>
+        </p>
+      ) : null}
 
       {formError ? (
         <p

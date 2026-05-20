@@ -4,7 +4,13 @@ import { AuctionListingCard } from "@/components/auction-listing-card";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_CATEGORY_OPTIONS } from "@/lib/listing-form";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
+import { expirePastDueListings } from "@/lib/expire-listings";
+import { getListingReserveStatus } from "@/lib/reserve-price";
 import { createClient } from "@/lib/supabase/server";
+import {
+  sortListingsByVisibilityThenUserSort,
+  type ListingSortKey,
+} from "@/lib/listing-visibility";
 
 type ListingCard = {
   id: string;
@@ -12,10 +18,16 @@ type ListingCard = {
   title: string;
   category: string;
   current_price: number;
+  created_at: string;
   auction_end: string;
   status: string;
+  reserve_price: number | null;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
+};
+
+type ListingCardWithReserve = ListingCard & {
+  reserveStatus: ReturnType<typeof getListingReserveStatus>;
 };
 
 type AuctionsPageProps = {
@@ -58,10 +70,12 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
   const selectedStatus = Object.keys(STATUS_OPTIONS).includes(rawStatus) ? rawStatus : "active";
   const selectedSort = Object.keys(SORT_OPTIONS).includes(rawSort) ? rawSort : "ending_soon";
 
+  await expirePastDueListings(supabase);
+
   let query = supabase
     .from("listings")
     .select(
-      `id, seller_id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+      `id, seller_id, title, category, current_price, created_at, auction_end, status, reserve_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
     );
 
   if (rawSearch) {
@@ -73,29 +87,21 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
     query = query.eq("category", selectedCategory);
   }
 
-  if (selectedStatus !== "all") {
-    query = query.eq("status", selectedStatus);
-  }
-
-  switch (selectedSort) {
-    case "newest":
-      query = query.order("created_at", { ascending: false });
-      break;
-    case "price_asc":
-      query = query.order("current_price", { ascending: true });
-      break;
-    case "price_desc":
-      query = query.order("current_price", { ascending: false });
-      break;
-    case "ending_soon":
-    default:
-      query = query.order("auction_end", { ascending: true });
-      break;
+  if (selectedStatus === "active") {
+    query = query.eq("status", "active").gt("auction_end", new Date().toISOString());
+  } else if (selectedStatus === "ended") {
+    query = query.eq("status", "ended");
   }
 
   const { data, error } = await query;
 
-  const listings = (data ?? []) as ListingCard[];
+  const listings: ListingCardWithReserve[] = sortListingsByVisibilityThenUserSort(
+    (data ?? []) as ListingCard[],
+    selectedSort as ListingSortKey
+  ).map((listing) => ({
+    ...listing,
+    reserveStatus: getListingReserveStatus(listing.reserve_price, listing.current_price),
+  }));
   const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
   const hasFilters =
     Boolean(rawSearch) || selectedCategory !== "all" || selectedStatus !== "active";
