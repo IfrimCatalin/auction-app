@@ -276,22 +276,22 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label className="block text-sm font-medium text-stone-700">Photos</label>
-          <span className="text-xs text-stone-500">
+          <label className="block text-sm font-medium text-ink/90">Photos</label>
+          <span className="text-xs text-muted">
             {totalImageCount}/{MAX_LISTING_IMAGES}
           </span>
         </div>
-        <p className="mb-3 text-xs text-stone-500">
+        <p className="mb-3 text-xs text-muted">
           The first photo is the cover. Remove or add images as needed.
         </p>
 
         {coverPreview ? (
-          <div className="mb-3 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
+          <div className="mb-3 overflow-hidden rounded-2xl border border-border bg-page">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={coverPreview} alt="Cover preview" className="aspect-[4/3] w-full object-cover" />
           </div>
         ) : (
-          <div className="mb-3 flex aspect-[4/3] w-full items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 text-xs text-stone-500">
+          <div className="mb-3 flex aspect-[4/3] w-full items-center justify-center rounded-2xl border border-dashed border-border bg-page text-xs text-muted">
             No images yet
           </div>
         )}
@@ -305,11 +305,11 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
                   src={img.image_url}
                   alt={`Existing ${index + 1}`}
                   className={`aspect-square w-full rounded-xl object-cover ${
-                    index === 0 ? "ring-2 ring-stone-900" : ""
+                    index === 0 ? "ring-2 ring-accent" : ""
                   }`}
                 />
                 {index === 0 ? (
-                  <span className="absolute left-1 top-1 rounded bg-stone-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  <span className="absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-black">
                     Cover
                   </span>
                 ) : null}
@@ -317,7 +317,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
                   type="button"
                   onClick={() => markExistingRemoved(img.id)}
                   disabled={loading}
-                  className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 shadow hover:bg-white"
+                  className="absolute right-1 top-1 rounded-full bg-surface/90 px-1.5 py-0.5 text-[10px] font-medium text-ink/90 shadow hover:bg-surface"
                   aria-label={`Remove image ${index + 1}`}
                 >
                   ×
@@ -333,11 +333,11 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
                     src={img.previewUrl}
                     alt={`New ${displayIndex + 1}`}
                     className={`aspect-square w-full rounded-xl object-cover ${
-                      displayIndex === 0 ? "ring-2 ring-stone-900" : ""
+                      displayIndex === 0 ? "ring-2 ring-accent" : ""
                     }`}
                   />
                   {displayIndex === 0 && keptExisting.length === 0 ? (
-                    <span className="absolute left-1 top-1 rounded bg-stone-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    <span className="absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-black">
                       Cover
                     </span>
                   ) : null}
@@ -345,7 +345,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
                     type="button"
                     onClick={() => removePendingImage(img.id)}
                     disabled={loading}
-                    className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 shadow hover:bg-white"
+                    className="absolute right-1 top-1 rounded-full bg-surface/90 px-1.5 py-0.5 text-[10px] font-medium text-ink/90 shadow hover:bg-surface"
                     aria-label={`Remove new image ${displayIndex + 1}`}
                   >
                     ×
@@ -362,7 +362,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
           multiple
           onChange={handleFilesChange}
           disabled={loading || totalImageCount >= MAX_LISTING_IMAGES}
-          className="block w-full cursor-pointer rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700 file:mr-4 file:rounded-full file:border-0 file:bg-stone-900 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="block w-full cursor-pointer rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink/90 file:mr-4 file:rounded-full file:border-0 file:bg-accent file:px-4 file:py-2 file:font-medium file:text-black hover:file:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
         />
         {imageCountError ? (
           <p className="mt-1.5 text-sm text-rose-600">{imageCountError}</p>
@@ -370,7 +370,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
       </div>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Title</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Title</span>
         <input
           type="text"
           value={title}
@@ -382,7 +382,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Description</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Description</span>
         <textarea
           rows={4}
           value={description}
@@ -395,7 +395,7 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-stone-700">Category</span>
+          <span className="mb-2 block text-sm font-medium text-ink/90">Category</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -412,19 +412,19 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
         </label>
 
         <div className="block">
-          <span className="mb-2 block text-sm font-medium text-stone-700">Starting price</span>
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
+          <span className="mb-2 block text-sm font-medium text-ink/90">Starting price</span>
+          <div className="rounded-2xl border border-border bg-page px-4 py-3 text-sm text-muted">
             {new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: "USD",
             }).format(initial.startingPrice)}
-            <p className="mt-1 text-xs text-stone-500">Cannot be changed after listing.</p>
+            <p className="mt-1 text-xs text-muted">Cannot be changed after listing.</p>
           </div>
         </div>
       </div>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Auction end</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Auction end</span>
         <input
           type="datetime-local"
           value={auctionEnd}
@@ -434,23 +434,23 @@ export function EditListingForm({ listingId, sellerId, initial }: EditListingFor
           className={listingInputClass(Boolean(showError("auctionEnd")))}
         />
         <FieldError message={showError("auctionEnd") || undefined} />
-        <p className="mt-1.5 text-xs text-stone-500">Must be a future date and time.</p>
+        <p className="mt-1.5 text-xs text-muted">Must be a future date and time.</p>
       </label>
 
       {formError ? (
-        <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
           {formError}
         </p>
       ) : null}
 
       {submitAttempted && !isFormValid ? (
-        <p className="text-sm text-stone-600">Please fix the highlighted fields before saving.</p>
+        <p className="text-sm text-muted">Please fix the highlighted fields before saving.</p>
       ) : null}
 
       <button
         type="submit"
         disabled={submitDisabled}
-        className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Saving…" : "Save changes"}
       </button>

@@ -21,7 +21,7 @@ export function MarkNotificationReadButton({
 
   if (isRead) {
     return (
-      <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">
+      <span className="rounded-full bg-page-dark px-3 py-1 text-xs font-medium text-muted">
         Read
       </span>
     );
@@ -44,7 +44,7 @@ export function MarkNotificationReadButton({
       type="button"
       onClick={onMarkRead}
       disabled={loading}
-      className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+      className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink/90 transition hover:bg-page-dark disabled:cursor-not-allowed disabled:opacity-60"
     >
       {loading ? "Marking..." : "Mark as read"}
     </button>

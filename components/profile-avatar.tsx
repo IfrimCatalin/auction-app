@@ -23,14 +23,14 @@ export function ProfileAvatar({ profile, size = "md", className = "" }: ProfileA
       <img
         src={profile.avatar_url}
         alt={displayName}
-        className={`rounded-full object-cover bg-stone-100 ${sizeClass} ${className}`}
+        className={`rounded-full object-cover bg-page-dark ${sizeClass} ${className}`}
       />
     );
   }
 
   return (
     <div
-      className={`flex items-center justify-center rounded-full bg-stone-200 font-semibold text-stone-700 ${sizeClass} ${className}`}
+      className={`flex items-center justify-center rounded-full bg-page-dark font-semibold text-accent ${sizeClass} ${className}`}
       aria-hidden
     >
       {initials}

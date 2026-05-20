@@ -12,13 +12,12 @@ export const LISTING_STORAGE_BUCKET = "listing-images";
 export const MAX_LISTING_IMAGES = 8;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-export const inputBaseClass =
-  "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900";
+import { inputBase } from "@/lib/ui-theme";
+
+export const inputBaseClass = inputBase;
 
 export function listingInputClass(hasError: boolean) {
-  return hasError
-    ? `${inputBaseClass} border-rose-400 focus:border-rose-500`
-    : `${inputBaseClass} border-stone-300`;
+  return hasError ? `${inputBase} border-rose-400/80 focus:border-rose-400` : inputBase;
 }
 
 export function toDatetimeLocalValue(iso: string): string {

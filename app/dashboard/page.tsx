@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GobidMeLogo } from "@/components/gobidme-logo";
 import { redirect } from "next/navigation";
 import { ListingCover } from "@/components/listing-cover";
 import { LogoutButton } from "@/components/logout-button";
@@ -53,35 +54,39 @@ export default async function DashboardPage() {
   const unreadNotificationCount = await getUnreadNotificationCount(supabase, user.id);
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+    <main className="min-h-screen bg-page text-ink">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            GoBidMe
-          </Link>
+          <GobidMeLogo />
           <div className="flex items-center gap-2">
             <Link
+              href="/my-listings"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              My Listings
+            </Link>
+            <Link
               href="/watchlist"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Watchlist
             </Link>
             <Link
               href="/notifications"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Notifications
               {unreadNotificationCount > 0 ? ` (${unreadNotificationCount})` : ""}
             </Link>
             <Link
               href="/profile"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Profile
             </Link>
             <Link
               href="/auctions"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Browse
             </Link>
@@ -93,37 +98,37 @@ export default async function DashboardPage() {
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-10 lg:px-8 lg:pt-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-stone-500">Welcome back</p>
+            <p className="text-sm font-medium text-muted">Welcome back</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
               {user.email?.split("@")[0]}
             </h1>
-            <p className="mt-2 text-sm text-stone-500">Signed in as {user.email}</p>
+            <p className="mt-2 text-sm text-muted">Signed in as {user.email}</p>
           </div>
           <Link
             href="/create-listing"
-            className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+            className="rounded-full bg-accent px-5 py-3 text-sm font-medium text-black transition hover:bg-accent/90"
           >
             + New listing
           </Link>
         </div>
 
         <section className="mt-10 grid gap-4 sm:grid-cols-3">
-          <article className="rounded-3xl border border-stone-200 bg-white p-5">
-            <p className="text-sm text-stone-500">Active bids</p>
+          <article className="rounded-3xl border border-border bg-surface p-5">
+            <p className="text-sm text-muted">Active bids</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">12</p>
           </article>
           <Link
             href="/watchlist"
-            className="rounded-3xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-sm"
+            className="rounded-3xl border border-border bg-surface p-5 transition hover:border-accent/40 hover:shadow-sm"
           >
-            <p className="text-sm text-stone-500">Watchlist</p>
+            <p className="text-sm text-muted">Watchlist</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">{watchlistCount}</p>
           </Link>
           <Link
             href="/notifications"
-            className="rounded-3xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-sm"
+            className="rounded-3xl border border-border bg-surface p-5 transition hover:border-accent/40 hover:shadow-sm"
           >
-            <p className="text-sm text-stone-500">Unread alerts</p>
+            <p className="text-sm text-muted">Unread alerts</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">{unreadNotificationCount}</p>
           </Link>
         </section>
@@ -132,20 +137,28 @@ export default async function DashboardPage() {
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Your listings</h2>
-              <p className="mt-1 text-sm text-stone-500">Items you’ve listed for auction.</p>
+              <p className="mt-1 text-sm text-muted">Items you’ve listed for auction.</p>
             </div>
-            <Link
-              href="/create-listing"
-              className="text-sm font-medium text-stone-900 underline-offset-4 hover:underline"
-            >
-              Create listing
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/my-listings"
+                className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+              >
+                View all
+              </Link>
+              <Link
+                href="/create-listing"
+                className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+              >
+                Create listing
+              </Link>
+            </div>
           </div>
 
           {myListings.length === 0 ? (
-            <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+            <div className="rounded-3xl border border-border bg-surface p-10 text-center text-sm text-muted">
               You haven’t listed anything yet. Start with{" "}
-              <Link href="/create-listing" className="font-medium text-stone-900 underline">
+              <Link href="/create-listing" className="font-medium text-ink underline">
                 your first listing
               </Link>
               .
@@ -159,9 +172,9 @@ export default async function DashboardPage() {
                 <Link
                   key={listing.id}
                   href={`/auctions/${listing.id}`}
-                  className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
+                  className="group overflow-hidden rounded-3xl border border-border bg-surface transition hover:shadow-md"
                 >
-                  <div className="aspect-square w-full overflow-hidden bg-stone-100">
+                  <div className="aspect-square w-full overflow-hidden bg-page-dark">
                     <ListingCover
                       src={coverUrl}
                       alt={listing.title}
@@ -169,17 +182,17 @@ export default async function DashboardPage() {
                     />
                   </div>
                   <div className="p-4">
-                    <p className="text-xs uppercase tracking-wide text-stone-500">
+                    <p className="text-xs uppercase tracking-wide text-muted">
                       {listing.category}
                     </p>
-                    <h3 className="mt-1 line-clamp-1 text-base font-medium text-stone-900">
+                    <h3 className="mt-1 line-clamp-1 text-base font-medium text-ink">
                       {listing.title}
                     </h3>
                     <div className="mt-3 flex items-center justify-between">
-                      <p className="text-lg font-semibold text-stone-900">
+                      <p className="text-lg font-semibold text-ink">
                         {formatPrice(listing.current_price)}
                       </p>
-                      <span className="rounded-full bg-stone-100 px-3 py-1 text-[11px] font-medium text-stone-700">
+                      <span className="rounded-full bg-page-dark px-3 py-1 text-[11px] font-medium text-ink/90">
                         {listing.status}
                       </span>
                     </div>

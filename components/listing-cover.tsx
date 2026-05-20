@@ -9,7 +9,7 @@ export function ListingCover({
   src,
   alt,
   className = "h-full w-full object-cover",
-  fallbackClassName = "flex h-full w-full items-center justify-center text-xs text-stone-400",
+  fallbackClassName = "flex h-full w-full items-center justify-center text-xs text-muted/70",
 }: ListingCoverProps) {
   if (!src) {
     return <div className={fallbackClassName}>No image</div>;

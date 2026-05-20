@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuctionListingCard } from "@/components/auction-listing-card";
@@ -69,28 +70,32 @@ export default async function WatchlistPage() {
   const favoritedIds = new Set(listings.map((listing) => listing.id));
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+    <main className="min-h-screen bg-page text-ink">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            GoBidMe
-          </Link>
+          <GobidMeLogo />
           <div className="flex items-center gap-2">
             <Link
+              href="/my-listings"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              My Listings
+            </Link>
+            <Link
               href="/dashboard"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Dashboard
             </Link>
             <Link
               href="/auctions"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Browse
             </Link>
             <Link
               href="/notifications"
-              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >
               Notifications
             </Link>
@@ -102,21 +107,21 @@ export default async function WatchlistPage() {
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-10 lg:px-8 lg:pt-14">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Watchlist</h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-muted">
             Listings you&apos;ve saved to follow and bid on later.
           </p>
         </div>
 
         {error ? (
-          <div className="mt-8 rounded-3xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+          <div className="mt-8 rounded-3xl border border-rose-500/30 bg-rose-950/40 px-5 py-4 text-sm text-rose-300">
             Could not load watchlist: {error.message}
           </div>
         ) : null}
 
         {listings.length === 0 && !error ? (
-          <div className="mt-8 rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+          <div className="mt-8 rounded-3xl border border-border bg-surface p-10 text-center text-sm text-muted">
             Your watchlist is empty.{" "}
-            <Link href="/auctions" className="font-medium text-stone-900 underline">
+            <Link href="/auctions" className="font-medium text-ink underline">
               Browse live auctions
             </Link>{" "}
             and tap the heart to save items you like.

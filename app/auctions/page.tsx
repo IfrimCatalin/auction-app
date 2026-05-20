@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GobidMeLogo } from "@/components/gobidme-logo";
 import { AuctionListingCard } from "@/components/auction-listing-card";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_CATEGORY_OPTIONS } from "@/lib/listing-form";
@@ -100,24 +101,22 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
     Boolean(rawSearch) || selectedCategory !== "all" || selectedStatus !== "active";
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+    <main className="min-h-screen bg-page text-ink">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            GoBidMe
-          </Link>
+          <GobidMeLogo />
           <div className="flex items-center gap-2">
             {user ? (
               <>
                 <Link
                   href="/watchlist"
-                  className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+                  className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
                 >
                   Watchlist
                 </Link>
                 <Link
                   href="/notifications"
-                  className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+                  className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
                 >
                   Notifications
                 </Link>
@@ -125,7 +124,7 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
             ) : null}
             <Link
               href="/create-listing"
-              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
             >
               Sell an item
             </Link>
@@ -137,22 +136,22 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Live auctions</h1>
-            <p className="mt-2 text-sm text-stone-500">
+            <p className="mt-2 text-sm text-muted">
               Browse listings from sellers around the community.
             </p>
           </div>
           <Link
             href="/"
-            className="hidden text-sm font-medium text-stone-600 transition hover:text-stone-900 sm:inline"
+            className="hidden text-sm font-medium text-muted transition hover:text-ink sm:inline"
           >
             ← Home
           </Link>
         </div>
 
-        <form method="get" className="mb-8 rounded-3xl border border-stone-200 bg-white p-4 sm:p-5">
+        <form method="get" className="mb-8 rounded-3xl border border-border bg-surface p-4 sm:p-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
                 Search
               </span>
               <input
@@ -160,18 +159,18 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
                 name="q"
                 defaultValue={rawSearch}
                 placeholder="Search title or description"
-                className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900"
+                className="w-full rounded-2xl border border-border bg-page-dark px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
                 Category
               </span>
               <select
                 name="category"
                 defaultValue={selectedCategory}
-                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
               >
                 <option value="all">All categories</option>
                 {LISTING_CATEGORY_OPTIONS.map((category) => (
@@ -183,13 +182,13 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
                 Status
               </span>
               <select
                 name="status"
                 defaultValue={selectedStatus}
-                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
               >
                 {Object.entries(STATUS_OPTIONS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -200,13 +199,13 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
                 Sort
               </span>
               <select
                 name="sort"
                 defaultValue={selectedSort}
-                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
               >
                 {Object.entries(SORT_OPTIONS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -219,14 +218,14 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
             <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
               <button
                 type="submit"
-                className="w-full rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 lg:w-auto"
+                className="w-full rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-black transition hover:bg-accent/90 lg:w-auto"
               >
                 Apply
               </button>
               {hasFilters ? (
                 <Link
                   href="/auctions"
-                  className="whitespace-nowrap rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                  className="whitespace-nowrap rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink/90 transition hover:bg-page-dark"
                 >
                   Reset
                 </Link>
@@ -236,19 +235,19 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
         </form>
 
         {error ? (
-          <div className="rounded-3xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+          <div className="rounded-3xl border border-rose-500/30 bg-rose-950/40 px-5 py-4 text-sm text-rose-300">
             Could not load auctions: {error.message}
           </div>
         ) : null}
 
         {listings.length === 0 && !error ? (
-          <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+          <div className="rounded-3xl border border-border bg-surface p-10 text-center text-sm text-muted">
             {hasFilters ? (
               "No auctions match your current filters."
             ) : (
               <>
                 No live auctions yet. Be the first to{" "}
-                <Link href="/create-listing" className="font-medium text-stone-900 underline">
+                <Link href="/create-listing" className="font-medium text-ink underline">
                   create a listing
                 </Link>
                 .

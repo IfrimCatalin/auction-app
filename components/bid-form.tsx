@@ -112,7 +112,7 @@ export function BidForm({
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-3">
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Your bid (USD)</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Your bid (USD)</span>
         <input
           type="number"
           required
@@ -122,12 +122,12 @@ export function BidForm({
           onChange={(e) => setAmount(e.target.value)}
           disabled={formDisabled || loading}
           placeholder={`Min. ${minimumNext}`}
-          className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900 disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-500"
+          className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent disabled:cursor-not-allowed disabled:bg-page disabled:text-muted"
         />
       </label>
 
       {formDisabled ? (
-        <p className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <p className="rounded-2xl border border-amber-500/30 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
           {disabledReason}
         </p>
       ) : null}
@@ -136,8 +136,8 @@ export function BidForm({
         <p
           className={
             message.type === "error"
-              ? "rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-              : "rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+              ? "rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300"
+              : "rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent"
           }
         >
           {message.text}
@@ -147,7 +147,7 @@ export function BidForm({
       <button
         type="submit"
         disabled={formDisabled || loading}
-        className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Placing bid…" : "Place bid"}
       </button>

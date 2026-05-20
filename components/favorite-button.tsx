@@ -102,8 +102,8 @@ export function FavoriteButton({
         aria-pressed={favorited}
         className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
           favorited
-            ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
-            : "border-stone-300 bg-white text-stone-700 hover:bg-stone-100"
+            ? "border-rose-500/30 bg-rose-950/40 text-rose-300 hover:bg-rose-950/60"
+            : "border-border bg-surface text-ink/90 hover:bg-page-dark"
         } ${className}`}
       >
         <HeartIcon filled={favorited} />
@@ -119,8 +119,8 @@ export function FavoriteButton({
       disabled={loading}
       aria-label={label}
       aria-pressed={favorited}
-      className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-600 shadow-sm backdrop-blur transition hover:bg-white hover:text-rose-600 disabled:opacity-60 ${
-        favorited ? "text-rose-600" : ""
+      className={`flex h-9 w-9 items-center justify-center rounded-full bg-surface/95 text-muted shadow-sm backdrop-blur transition hover:bg-surface hover:text-accent disabled:opacity-60 ${
+        favorited ? "text-accent" : ""
       } ${className}`}
     >
       <HeartIcon filled={favorited} />

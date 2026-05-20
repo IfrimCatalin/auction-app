@@ -45,7 +45,7 @@ export function SellerListingsGrid({
 }: SellerListingsGridProps) {
   if (listings.length === 0) {
     return (
-      <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
+      <div className="rounded-3xl border border-border bg-surface p-10 text-center text-sm text-muted">
         {emptyMessage}
       </div>
     );
@@ -60,25 +60,25 @@ export function SellerListingsGrid({
           <Link
             key={listing.id}
             href={`/auctions/${listing.id}`}
-            className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
+            className="group overflow-hidden rounded-3xl border border-border bg-surface transition hover:shadow-md"
           >
-            <div className="relative aspect-square w-full overflow-hidden bg-stone-100">
+            <div className="relative aspect-square w-full overflow-hidden bg-page-dark">
               <ListingCover
                 src={coverUrl}
                 alt={listing.title}
                 className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
               />
-              <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-stone-700 backdrop-blur">
+              <span className="absolute left-3 top-3 rounded-full bg-surface/90 px-3 py-1 text-[11px] font-medium text-ink/90 backdrop-blur">
                 {listing.category}
               </span>
             </div>
             <div className="p-4">
-              <h3 className="line-clamp-1 text-base font-medium text-stone-900">{listing.title}</h3>
+              <h3 className="line-clamp-1 text-base font-medium text-ink">{listing.title}</h3>
               <div className="mt-3 flex items-end justify-between">
-                <p className="text-lg font-semibold text-stone-900">
+                <p className="text-lg font-semibold text-ink">
                   {formatPrice(listing.current_price)}
                 </p>
-                <p className="text-xs font-medium text-stone-500">
+                <p className="text-xs font-medium text-muted">
                   {formatRelative(listing.auction_end)}
                 </p>
               </div>

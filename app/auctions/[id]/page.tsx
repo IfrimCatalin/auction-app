@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BidForm } from "@/components/bid-form";
+import { BidHistory } from "@/components/bid-history";
+import { getListingBidHistory } from "@/lib/bids";
 import { ListingImageGallery } from "@/components/listing-image-gallery";
 import { SellerListingActions } from "@/components/seller-listing-actions";
 import {
@@ -94,17 +97,16 @@ export default async function AuctionDetailsPage({
   const sellerName = getProfileDisplayName(sellerProfile, "Seller");
   const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
   const isFavorited = isListingFavorited(favoritedIds, listing.id);
+  const bidHistory = await getListingBidHistory(supabase, listing.id);
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+    <main className="min-h-screen bg-page text-ink">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            GoBidMe
-          </Link>
+          <GobidMeLogo />
           <Link
             href="/auctions"
-            className="text-sm font-medium text-stone-600 transition hover:text-stone-900"
+            className="text-sm font-medium text-muted transition hover:text-ink"
           >
             ← All auctions
           </Link>
@@ -116,45 +118,45 @@ export default async function AuctionDetailsPage({
           <div className="space-y-4">
             <ListingImageGallery images={galleryUrls} title={listing.title} />
 
-            <div className="rounded-3xl border border-stone-200 bg-white p-6">
-              <p className="text-xs uppercase tracking-wide text-stone-500">{listing.category}</p>
+            <div className="rounded-3xl border border-border bg-surface p-6">
+              <p className="text-xs uppercase tracking-wide text-muted">{listing.category}</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {listing.title}
               </h1>
-              <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-stone-700">
+              <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-ink/90">
                 {listing.description}
               </p>
 
               <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                <div className="rounded-2xl border border-border bg-page p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Starting price
                   </dt>
-                  <dd className="mt-1 text-base font-semibold text-stone-900">
+                  <dd className="mt-1 text-base font-semibold text-ink">
                     {formatPrice(listing.starting_price)}
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                <div className="rounded-2xl border border-border bg-page p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Auction end
                   </dt>
-                  <dd className="mt-1 text-sm font-medium text-stone-900">
+                  <dd className="mt-1 text-sm font-medium text-ink">
                     {formatDate(listing.auction_end)}
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                <div className="rounded-2xl border border-border bg-page p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Status
                   </dt>
-                  <dd className="mt-1 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                  <dd className="mt-1 inline-flex rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
                     {listing.status}
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                <div className="rounded-2xl border border-border bg-page p-4">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Listed
                   </dt>
-                  <dd className="mt-1 text-sm font-medium text-stone-900">
+                  <dd className="mt-1 text-sm font-medium text-ink">
                     {formatDate(listing.created_at)}
                   </dd>
                 </div>
@@ -163,13 +165,13 @@ export default async function AuctionDetailsPage({
           </div>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-3xl border border-stone-200 bg-white p-6">
+            <div className="rounded-3xl border border-border bg-surface p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
                     Current bid
                   </p>
-                  <p className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
+                  <p className="mt-1 text-4xl font-semibold tracking-tight text-ink">
                     {formatPrice(listing.current_price)}
                   </p>
                 </div>
@@ -192,11 +194,11 @@ export default async function AuctionDetailsPage({
                   imageUrls={galleryUrls}
                 />
               ) : !user ? (
-                <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
+                <div className="mt-6 rounded-2xl border border-border bg-page p-4 text-sm text-muted">
                   You need to be signed in to place a bid.{" "}
                   <Link
                     href="/login"
-                    className="font-medium text-stone-900 underline-offset-4 hover:underline"
+                    className="font-medium text-ink underline-offset-4 hover:underline"
                   >
                     Sign in
                   </Link>
@@ -212,18 +214,20 @@ export default async function AuctionDetailsPage({
                 />
               )}
 
+              <BidHistory bids={bidHistory} />
+
               <Link
                 href={`/seller/${listing.seller_id}`}
-                className="mt-6 flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4 transition hover:border-stone-300 hover:bg-stone-100"
+                className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-page p-4 transition hover:border-accent/40 hover:bg-page-dark"
               >
                 <ProfileAvatar profile={sellerProfile} size="sm" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
                     Sold by
                   </p>
-                  <p className="truncate text-sm font-semibold text-stone-900">{sellerName}</p>
+                  <p className="truncate text-sm font-semibold text-ink">{sellerName}</p>
                   {sellerProfile?.username ? (
-                    <p className="truncate text-xs text-stone-500">@{sellerProfile.username}</p>
+                    <p className="truncate text-xs text-muted">@{sellerProfile.username}</p>
                   ) : null}
                 </div>
               </Link>

@@ -203,9 +203,9 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <ProfileAvatar profile={previewProfile} size="lg" />
         <div className="flex-1 space-y-3">
-          <p className="text-sm font-medium text-stone-700">Profile photo</p>
+          <p className="text-sm font-medium text-ink/90">Profile photo</p>
           <div className="flex flex-wrap gap-2">
-            <label className="cursor-pointer rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100">
+            <label className="cursor-pointer rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark">
               Upload photo
               <input
                 type="file"
@@ -218,18 +218,18 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
               <button
                 type="button"
                 onClick={handleRemoveAvatar}
-                className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100"
+                className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-muted transition hover:bg-page-dark"
               >
                 Remove
               </button>
             ) : null}
           </div>
-          <p className="text-xs text-stone-500">JPG, PNG, or WebP · max 2 MB</p>
+          <p className="text-xs text-muted">JPG, PNG, or WebP · max 2 MB</p>
         </div>
       </div>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Username</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Username</span>
         <input
           type="text"
           value={username}
@@ -239,11 +239,11 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
           className={listingInputClass(Boolean(showError("username")))}
         />
         <FieldError message={showError("username")} />
-        <p className="mt-1 text-xs text-stone-500">Shown on your public seller page. Letters, numbers, underscores.</p>
+        <p className="mt-1 text-xs text-muted">Shown on your public seller page. Letters, numbers, underscores.</p>
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Full name</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Full name</span>
         <input
           type="text"
           value={fullName}
@@ -256,7 +256,7 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Location</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Location</span>
         <input
           type="text"
           value={location}
@@ -268,7 +268,7 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
       </label>
 
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-stone-700">Bio</span>
+        <span className="mb-2 block text-sm font-medium text-ink/90">Bio</span>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
@@ -280,13 +280,13 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
       </label>
 
       {formError ? (
-        <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
           {formError}
         </p>
       ) : null}
 
       {successMessage ? (
-        <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <p className="rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
           {successMessage}
         </p>
       ) : null}
@@ -294,7 +294,7 @@ export function ProfileForm({ userId, initial }: ProfileFormProps) {
       <button
         type="submit"
         disabled={!isFormValid || loading}
-        className="rounded-full bg-stone-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Saving…" : "Save profile"}
       </button>

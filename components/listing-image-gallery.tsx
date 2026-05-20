@@ -13,8 +13,8 @@ export function ListingImageGallery({ images, title }: ListingImageGalleryProps)
 
   if (galleryImages.length === 0) {
     return (
-      <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-        <div className="flex aspect-square w-full items-center justify-center bg-stone-100 text-sm text-stone-400">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+        <div className="flex aspect-square w-full items-center justify-center bg-page-dark text-sm text-muted/70">
           No images provided
         </div>
       </div>
@@ -25,8 +25,8 @@ export function ListingImageGallery({ images, title }: ListingImageGalleryProps)
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-        <div className="aspect-square w-full overflow-hidden bg-stone-100">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+        <div className="aspect-square w-full overflow-hidden bg-page-dark">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={activeSrc} alt={title} className="h-full w-full object-cover" />
         </div>
@@ -41,7 +41,7 @@ export function ListingImageGallery({ images, title }: ListingImageGalleryProps)
               onClick={() => setActiveIndex(index)}
               className={`overflow-hidden rounded-xl border-2 transition ${
                 index === activeIndex
-                  ? "border-stone-900"
+                  ? "border-accent"
                   : "border-transparent opacity-80 hover:opacity-100"
               }`}
               aria-label={`View image ${index + 1} of ${galleryImages.length}`}

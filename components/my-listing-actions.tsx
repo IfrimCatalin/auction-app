@@ -6,17 +6,19 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { removeStorageImagesByUrls } from "@/lib/storage-images";
 
-type SellerListingActionsProps = {
+type MyListingActionsProps = {
   listingId: string;
   listingTitle: string;
   imageUrls: string[];
+  redirectAfterDelete?: string;
 };
 
-export function SellerListingActions({
+export function MyListingActions({
   listingId,
   listingTitle,
   imageUrls,
-}: SellerListingActionsProps) {
+  redirectAfterDelete = "/my-listings",
+}: MyListingActionsProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -43,18 +45,24 @@ export function SellerListingActions({
     }
 
     setShowDeleteModal(false);
-    router.push("/dashboard");
+    router.push(redirectAfterDelete);
     router.refresh();
   };
 
   return (
     <>
-      <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/auctions/${listingId}`}
+          className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-page-dark sm:text-sm"
+        >
+          View
+        </Link>
         <Link
           href={`/edit-listing/${listingId}`}
-          className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark"
+          className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition hover:bg-page-dark sm:text-sm"
         >
-          Edit listing
+          Edit
         </Link>
         <button
           type="button"
@@ -62,9 +70,9 @@ export function SellerListingActions({
             setErrorMessage("");
             setShowDeleteModal(true);
           }}
-          className="rounded-full border border-rose-500/40 bg-rose-950/30 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-950/50"
+          className="rounded-full border border-rose-500/40 bg-rose-950/30 px-3 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-950/50 sm:text-sm"
         >
-          Delete listing
+          Delete
         </button>
       </div>
 
@@ -73,10 +81,10 @@ export function SellerListingActions({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-listing-title"
+          aria-labelledby="delete-my-listing-title"
         >
           <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-6 shadow-xl">
-            <h3 id="delete-listing-title" className="text-lg font-semibold text-ink">
+            <h3 id="delete-my-listing-title" className="text-lg font-semibold text-ink">
               Delete this listing?
             </h3>
             <p className="mt-2 text-sm text-muted">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProfileAvatar } from "@/components/profile-avatar";
@@ -49,15 +50,13 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const listings = (listingsData ?? []) as SellerListingCard[];
 
   return (
-    <main className="min-h-screen bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-stone-50/80 backdrop-blur">
+    <main className="min-h-screen bg-page text-ink">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            GoBidMe
-          </Link>
+          <GobidMeLogo />
           <Link
             href="/auctions"
-            className="text-sm font-medium text-stone-600 transition hover:text-stone-900"
+            className="text-sm font-medium text-muted transition hover:text-ink"
           >
             ← All auctions
           </Link>
@@ -65,26 +64,26 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
       </header>
 
       <section className="mx-auto max-w-6xl px-5 py-10 lg:px-8 lg:py-14">
-        <div className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
+        <div className="rounded-3xl border border-border bg-surface p-6 sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <ProfileAvatar profile={profile} size="lg" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Seller</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">Seller</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
                 {displayName}
               </h1>
               {profile?.username ? (
-                <p className="mt-1 text-sm text-stone-500">@{profile.username}</p>
+                <p className="mt-1 text-sm text-muted">@{profile.username}</p>
               ) : null}
               {profile?.location ? (
-                <p className="mt-3 text-sm text-stone-600">{profile.location}</p>
+                <p className="mt-3 text-sm text-muted">{profile.location}</p>
               ) : null}
               {profile?.bio ? (
-                <p className="mt-4 max-w-2xl whitespace-pre-wrap text-[15px] leading-relaxed text-stone-700">
+                <p className="mt-4 max-w-2xl whitespace-pre-wrap text-[15px] leading-relaxed text-ink/90">
                   {profile.bio}
                 </p>
               ) : (
-                <p className="mt-4 text-sm text-stone-500">
+                <p className="mt-4 text-sm text-muted">
                   This seller hasn&apos;t added a bio yet.
                 </p>
               )}
@@ -94,7 +93,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
 
         <div className="mt-10">
           <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Active listings</h2>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-1 text-sm text-muted">
             {listings.length === 0
               ? "No live auctions from this seller."
               : `${listings.length} live auction${listings.length === 1 ? "" : "s"}`}
