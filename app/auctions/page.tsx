@@ -1,44 +1,103 @@
 import Link from "next/link";
+import { AuctionListingCard } from "@/components/auction-listing-card";
+import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
+import { LISTING_CATEGORY_OPTIONS } from "@/lib/listing-form";
+import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
 import { createClient } from "@/lib/supabase/server";
 
 type ListingCard = {
   id: string;
+  seller_id: string;
   title: string;
   category: string;
   current_price: number;
   auction_end: string;
   status: string;
   image_url: string | null;
+  listing_images: ListingImageRow[] | null;
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
+type AuctionsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+const SORT_OPTIONS = {
+  ending_soon: "Ending soon",
+  newest: "Newest",
+  price_asc: "Price low to high",
+  price_desc: "Price high to low",
+} as const;
+
+const STATUS_OPTIONS = {
+  all: "All statuses",
+  active: "Active",
+  ended: "Ended",
+} as const;
+
+function readParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? "";
+  return value ?? "";
 }
 
-function formatRelative(value: string) {
-  const diffMs = new Date(value).getTime() - Date.now();
-  if (diffMs <= 0) return "Ended";
-  const minutes = Math.round(diffMs / 60000);
-  if (minutes < 60) return `${minutes}m left`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h left`;
-  const days = Math.round(hours / 24);
-  return `${days}d left`;
-}
-
-export default async function AuctionsPage() {
+export default async function AuctionsPage({ searchParams }: AuctionsPageProps) {
+  const params = await searchParams;
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const rawSearch = readParam(params.q).trim();
+  const rawCategory = readParam(params.category);
+  const rawStatus = readParam(params.status);
+  const rawSort = readParam(params.sort);
+
+  const selectedCategory = (LISTING_CATEGORY_OPTIONS as readonly string[]).includes(rawCategory)
+    ? rawCategory
+    : "all";
+  const selectedStatus = Object.keys(STATUS_OPTIONS).includes(rawStatus) ? rawStatus : "active";
+  const selectedSort = Object.keys(SORT_OPTIONS).includes(rawSort) ? rawSort : "ending_soon";
+
+  let query = supabase
     .from("listings")
-    .select("id, title, category, current_price, auction_end, status, image_url")
-    .eq("status", "active")
-    .order("auction_end", { ascending: true });
+    .select(
+      `id, seller_id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+    );
+
+  if (rawSearch) {
+    const safeSearch = rawSearch.replace(/,/g, " ").trim();
+    query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
+  }
+
+  if (selectedCategory !== "all") {
+    query = query.eq("category", selectedCategory);
+  }
+
+  if (selectedStatus !== "all") {
+    query = query.eq("status", selectedStatus);
+  }
+
+  switch (selectedSort) {
+    case "newest":
+      query = query.order("created_at", { ascending: false });
+      break;
+    case "price_asc":
+      query = query.order("current_price", { ascending: true });
+      break;
+    case "price_desc":
+      query = query.order("current_price", { ascending: false });
+      break;
+    case "ending_soon":
+    default:
+      query = query.order("auction_end", { ascending: true });
+      break;
+  }
+
+  const { data, error } = await query;
 
   const listings = (data ?? []) as ListingCard[];
+  const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
+  const hasFilters =
+    Boolean(rawSearch) || selectedCategory !== "all" || selectedStatus !== "active";
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-900">
@@ -47,12 +106,30 @@ export default async function AuctionsPage() {
           <Link href="/" className="text-xl font-semibold tracking-tight">
             GoBidMe
           </Link>
-          <Link
-            href="/create-listing"
-            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
-          >
-            Sell an item
-          </Link>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <>
+                <Link
+                  href="/watchlist"
+                  className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+                >
+                  Watchlist
+                </Link>
+                <Link
+                  href="/notifications"
+                  className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+                >
+                  Notifications
+                </Link>
+              </>
+            ) : null}
+            <Link
+              href="/create-listing"
+              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-stone-800"
+            >
+              Sell an item
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -72,6 +149,92 @@ export default async function AuctionsPage() {
           </Link>
         </div>
 
+        <form method="get" className="mb-8 rounded-3xl border border-stone-200 bg-white p-4 sm:p-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+                Search
+              </span>
+              <input
+                type="search"
+                name="q"
+                defaultValue={rawSearch}
+                placeholder="Search title or description"
+                className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+                Category
+              </span>
+              <select
+                name="category"
+                defaultValue={selectedCategory}
+                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+              >
+                <option value="all">All categories</option>
+                {LISTING_CATEGORY_OPTIONS.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+                Status
+              </span>
+              <select
+                name="status"
+                defaultValue={selectedStatus}
+                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+              >
+                {Object.entries(STATUS_OPTIONS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500">
+                Sort
+              </span>
+              <select
+                name="sort"
+                defaultValue={selectedSort}
+                className="w-full rounded-2xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900"
+              >
+                {Object.entries(SORT_OPTIONS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
+              <button
+                type="submit"
+                className="w-full rounded-full bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 lg:w-auto"
+              >
+                Apply
+              </button>
+              {hasFilters ? (
+                <Link
+                  href="/auctions"
+                  className="whitespace-nowrap rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                >
+                  Reset
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </form>
+
         {error ? (
           <div className="rounded-3xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-700">
             Could not load auctions: {error.message}
@@ -80,52 +243,29 @@ export default async function AuctionsPage() {
 
         {listings.length === 0 && !error ? (
           <div className="rounded-3xl border border-stone-200 bg-white p-10 text-center text-sm text-stone-500">
-            No live auctions yet. Be the first to{" "}
-            <Link href="/create-listing" className="font-medium text-stone-900 underline">
-              create a listing
-            </Link>
-            .
+            {hasFilters ? (
+              "No auctions match your current filters."
+            ) : (
+              <>
+                No live auctions yet. Be the first to{" "}
+                <Link href="/create-listing" className="font-medium text-stone-900 underline">
+                  create a listing
+                </Link>
+                .
+              </>
+            )}
           </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
-            <Link
+            <AuctionListingCard
               key={listing.id}
-              href={`/auctions/${listing.id}`}
-              className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
-            >
-              <div className="relative aspect-square w-full overflow-hidden bg-stone-100">
-                {listing.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={listing.image_url}
-                    alt={listing.title}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
-                    No image
-                  </div>
-                )}
-                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-stone-700 backdrop-blur">
-                  {listing.category}
-                </span>
-              </div>
-              <div className="p-4">
-                <h2 className="line-clamp-1 text-base font-medium text-stone-900">
-                  {listing.title}
-                </h2>
-                <div className="mt-3 flex items-end justify-between">
-                  <p className="text-lg font-semibold text-stone-900">
-                    {formatPrice(listing.current_price)}
-                  </p>
-                  <p className="text-xs font-medium text-stone-500">
-                    {formatRelative(listing.auction_end)}
-                  </p>
-                </div>
-              </div>
-            </Link>
+              listing={listing}
+              favorited={isListingFavorited(favoritedIds, listing.id)}
+              isAuthenticated={Boolean(user)}
+              userId={user?.id}
+            />
           ))}
         </div>
       </section>

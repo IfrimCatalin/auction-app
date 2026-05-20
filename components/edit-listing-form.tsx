@@ -3,26 +3,18 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
-type CreateListingFormProps = {
-  sellerId: string;
-};
-
-type FieldErrors = {
-  title?: string;
-  description?: string;
-  category?: string;
-  startingPrice?: string;
-  auctionEnd?: string;
-};
-
-type TouchedFields = {
-  title?: boolean;
-  description?: boolean;
-  category?: boolean;
-  startingPrice?: boolean;
-  auctionEnd?: boolean;
-};
+import {
+  LISTING_STORAGE_BUCKET,
+  LISTING_CATEGORY_OPTIONS,
+  MAX_IMAGE_BYTES,
+  MAX_LISTING_IMAGES,
+  listingInputClass,
+  minDatetimeLocalValue,
+  toDatetimeLocalValue,
+  validateEditListingFields,
+} from "@/lib/listing-form";
+import type { ListingImageRowWithId } from "@/lib/listing-images";
+import { removeStorageImagesByUrls } from "@/lib/storage-images";
 
 type PendingImage = {
   id: string;
@@ -30,112 +22,85 @@ type PendingImage = {
   previewUrl: string;
 };
 
-const categoryOptions = [
-  "Watches",
-  "Art",
-  "Cars",
-  "Sneakers",
-  "Tech",
-  "Memorabilia",
-  "Other",
-];
+type EditListingFormProps = {
+  listingId: string;
+  sellerId: string;
+  initial: {
+    title: string;
+    description: string;
+    category: string;
+    auctionEnd: string;
+    startingPrice: number;
+    images: ListingImageRowWithId[];
+  };
+};
 
-const STORAGE_BUCKET = "listing-images";
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_IMAGES = 8;
+type FieldErrors = {
+  title?: string;
+  description?: string;
+  category?: string;
+  auctionEnd?: string;
+};
 
-const inputBaseClass =
-  "w-full rounded-2xl border bg-white px-4 py-3 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-900";
+type TouchedFields = {
+  title?: boolean;
+  description?: boolean;
+  category?: boolean;
+  auctionEnd?: boolean;
+};
 
-function inputClass(hasError: boolean) {
-  return hasError
-    ? `${inputBaseClass} border-rose-400 focus:border-rose-500`
-    : `${inputBaseClass} border-stone-300`;
-}
-
-function validateForm(values: {
-  title: string;
-  description: string;
-  category: string;
-  startingPrice: string;
-  auctionEnd: string;
-}): FieldErrors {
-  const errors: FieldErrors = {};
-
-  if (!values.title.trim()) {
-    errors.title = "Title is required.";
-  }
-
-  if (!values.description.trim()) {
-    errors.description = "Description is required.";
-  }
-
-  if (!values.category || !categoryOptions.includes(values.category)) {
-    errors.category = "Please select a category.";
-  }
-
-  const priceRaw = values.startingPrice.trim();
-  const parsedPrice = Number(priceRaw);
-  if (!priceRaw) {
-    errors.startingPrice = "Starting price is required.";
-  } else if (!Number.isFinite(parsedPrice)) {
-    errors.startingPrice = "Enter a valid number.";
-  } else if (parsedPrice <= 0) {
-    errors.startingPrice = "Starting price must be greater than 0.";
-  }
-
-  const endRaw = values.auctionEnd.trim();
-  if (!endRaw) {
-    errors.auctionEnd = "Auction end date is required.";
-  } else {
-    const auctionEndDate = new Date(endRaw);
-    if (Number.isNaN(auctionEndDate.getTime())) {
-      errors.auctionEnd = "Enter a valid date and time.";
-    } else if (auctionEndDate.getTime() <= Date.now()) {
-      errors.auctionEnd = "Auction end must be in the future.";
-    }
-  }
-
-  return errors;
-}
-
-function FieldError({ message, id }: { message?: string; id?: string }) {
+function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-1.5 text-sm text-rose-600" role="alert">
+    <p className="mt-1.5 text-sm text-rose-600" role="alert">
       {message}
     </p>
   );
 }
 
-export function CreateListingForm({ sellerId }: CreateListingFormProps) {
+export function EditListingForm({ listingId, sellerId, initial }: EditListingFormProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState(categoryOptions[0]);
-  const [startingPrice, setStartingPrice] = useState("");
-  const [auctionEnd, setAuctionEnd] = useState("");
+  const [title, setTitle] = useState(initial.title);
+  const [description, setDescription] = useState(initial.description);
+  const [category, setCategory] = useState(initial.category);
+  const [auctionEnd, setAuctionEnd] = useState(toDatetimeLocalValue(initial.auctionEnd));
+  const existingImages = useMemo(
+    () => [...initial.images].sort((a, b) => a.sort_order - b.sort_order),
+    [initial.images]
+  );
+  const [removedImageIds, setRemovedImageIds] = useState<Set<string>>(new Set());
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
+  const keptExisting = useMemo(
+    () => existingImages.filter((img) => !removedImageIds.has(img.id)),
+    [existingImages, removedImageIds]
+  );
+
+  const totalImageCount = keptExisting.length + pendingImages.length;
+
   const fieldErrors = useMemo(
     () =>
-      validateForm({
+      validateEditListingFields({
         title,
         description,
         category,
-        startingPrice,
         auctionEnd,
       }),
-    [title, description, category, startingPrice, auctionEnd]
+    [title, description, category, auctionEnd]
   );
 
-  const isFormValid = Object.keys(fieldErrors).length === 0;
+  const imageCountError =
+    totalImageCount > MAX_LISTING_IMAGES
+      ? `You can have at most ${MAX_LISTING_IMAGES} images.`
+      : undefined;
+
+  const isFormValid = Object.keys(fieldErrors).length === 0 && !imageCountError;
   const submitDisabled = !isFormValid || loading;
 
   const showError = (field: keyof FieldErrors) =>
@@ -145,12 +110,19 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
+  const coverPreview =
+    keptExisting[0]?.image_url ?? pendingImages[0]?.previewUrl ?? null;
+
   const removePendingImage = (id: string) => {
     setPendingImages((prev) => {
       const target = prev.find((img) => img.id === id);
       if (target) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((img) => img.id !== id);
     });
+  };
+
+  const markExistingRemoved = (id: string) => {
+    setRemovedImageIds((prev) => new Set(prev).add(id));
   };
 
   const handleFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -160,15 +132,15 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
 
     if (files.length === 0) return;
 
-    const remainingSlots = MAX_IMAGES - pendingImages.length;
+    const remainingSlots = MAX_LISTING_IMAGES - totalImageCount;
     if (remainingSlots <= 0) {
-      setFormError(`You can upload up to ${MAX_IMAGES} images.`);
+      setFormError(`You can upload up to ${MAX_LISTING_IMAGES} images.`);
       return;
     }
 
     const filesToAdd = files.slice(0, remainingSlots);
     if (files.length > remainingSlots) {
-      setFormError(`Only ${remainingSlots} more image(s) can be added (max ${MAX_IMAGES}).`);
+      setFormError(`Only ${remainingSlots} more image(s) can be added (max ${MAX_LISTING_IMAGES}).`);
     }
 
     const newImages: PendingImage[] = [];
@@ -194,40 +166,41 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     }
   };
 
-  const uploadListingImages = async (listingId: string, images: PendingImage[]) => {
+  const uploadNewImages = async (startSortOrder: number) => {
     const rows: { listing_id: string; image_url: string; sort_order: number }[] = [];
 
-    for (let index = 0; index < images.length; index++) {
-      const { file } = images[index];
+    for (let index = 0; index < pendingImages.length; index++) {
+      const { file } = pendingImages[index];
       const extension = file.name.includes(".")
         ? file.name.split(".").pop()!.toLowerCase()
         : "jpg";
       const path = `${sellerId}/${listingId}/${crypto.randomUUID()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKET)
+        .from(LISTING_STORAGE_BUCKET)
         .upload(path, file, { contentType: file.type, upsert: false });
 
       if (uploadError) {
         throw new Error(`Image upload failed: ${uploadError.message}`);
       }
 
-      const { data: publicUrlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      const { data: publicUrlData } = supabase.storage
+        .from(LISTING_STORAGE_BUCKET)
+        .getPublicUrl(path);
+
       rows.push({
         listing_id: listingId,
         image_url: publicUrlData.publicUrl,
-        sort_order: index,
+        sort_order: startSortOrder + index,
       });
     }
 
-    if (rows.length === 0) return null;
+    if (rows.length === 0) return;
 
     const { error: insertError } = await supabase.from("listing_images").insert(rows);
     if (insertError) {
       throw new Error(insertError.message);
     }
-
-    return rows[0].image_url;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -235,73 +208,69 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
     setFormError("");
     setSubmitAttempted(true);
 
-    const errors = validateForm({
+    const errors = validateEditListingFields({
       title,
       description,
       category,
-      startingPrice,
       auctionEnd,
     });
 
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0 || imageCountError) {
       return;
     }
 
     setLoading(true);
 
-    const parsedPrice = Number(startingPrice);
     const auctionEndDate = new Date(auctionEnd);
 
-    const { data: listing, error: listingError } = await supabase
+    const { error: updateError } = await supabase
       .from("listings")
-      .insert({
+      .update({
         title: title.trim(),
         description: description.trim(),
         category,
-        starting_price: parsedPrice,
-        current_price: parsedPrice,
         auction_end: auctionEndDate.toISOString(),
-        status: "active",
-        seller_id: sellerId,
-        image_url: null,
       })
-      .select("id")
-      .single();
+      .eq("id", listingId);
 
-    if (listingError || !listing) {
-      setFormError(listingError?.message ?? "Could not create listing.");
+    if (updateError) {
+      setFormError(updateError.message);
       setLoading(false);
       return;
     }
 
     try {
-      const coverUrl = await uploadListingImages(listing.id, pendingImages);
+      const removedUrls = existingImages
+        .filter((img) => removedImageIds.has(img.id))
+        .map((img) => img.image_url);
 
-      if (coverUrl) {
-        await supabase.from("listings").update({ image_url: coverUrl }).eq("id", listing.id);
+      if (removedImageIds.size > 0) {
+        const { error: deleteError } = await supabase
+          .from("listing_images")
+          .delete()
+          .in("id", Array.from(removedImageIds));
+
+        if (deleteError) {
+          throw new Error(deleteError.message);
+        }
+
+        await removeStorageImagesByUrls(supabase, removedUrls);
       }
-    } catch (uploadErr) {
-      const message = uploadErr instanceof Error ? uploadErr.message : "Image upload failed.";
-      setFormError(
-        `${message} Your listing was created, but some images may be missing. You can add images later from your dashboard.`
-      );
+
+      const maxSort = keptExisting.reduce((max, img) => Math.max(max, img.sort_order), -1);
+      await uploadNewImages(maxSort + 1);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not update images.";
+      setFormError(message);
       setLoading(false);
-      router.push("/dashboard");
-      router.refresh();
       return;
     }
 
-    router.push("/dashboard");
+    router.push(`/auctions/${listingId}`);
     router.refresh();
   };
 
-  const minAuctionEnd = useMemo(() => {
-    const nextMinute = new Date(Date.now() + 60_000);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${nextMinute.getFullYear()}-${pad(nextMinute.getMonth() + 1)}-${pad(nextMinute.getDate())}T${pad(nextMinute.getHours())}:${pad(nextMinute.getMinutes())}`;
-  }, []);
-
-  const coverPreview = pendingImages[0]?.previewUrl;
+  const minAuctionEnd = useMemo(() => minDatetimeLocalValue(), []);
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -309,36 +278,32 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         <div className="mb-2 flex items-center justify-between">
           <label className="block text-sm font-medium text-stone-700">Photos</label>
           <span className="text-xs text-stone-500">
-            {pendingImages.length}/{MAX_IMAGES}
+            {totalImageCount}/{MAX_LISTING_IMAGES}
           </span>
         </div>
         <p className="mb-3 text-xs text-stone-500">
-          Add up to {MAX_IMAGES} images. The first photo is the cover on auction cards.
+          The first photo is the cover. Remove or add images as needed.
         </p>
 
         {coverPreview ? (
           <div className="mb-3 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverPreview}
-              alt="Cover preview"
-              className="aspect-[4/3] w-full object-cover"
-            />
+            <img src={coverPreview} alt="Cover preview" className="aspect-[4/3] w-full object-cover" />
           </div>
         ) : (
           <div className="mb-3 flex aspect-[4/3] w-full items-center justify-center rounded-2xl border border-dashed border-stone-300 bg-stone-50 text-xs text-stone-500">
-            PNG or JPG · up to 5 MB each
+            No images yet
           </div>
         )}
 
-        {pendingImages.length > 0 ? (
+        {keptExisting.length > 0 || pendingImages.length > 0 ? (
           <div className="mb-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
-            {pendingImages.map((img, index) => (
+            {keptExisting.map((img, index) => (
               <div key={img.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={img.previewUrl}
-                  alt={`Preview ${index + 1}`}
+                  src={img.image_url}
+                  alt={`Existing ${index + 1}`}
                   className={`aspect-square w-full rounded-xl object-cover ${
                     index === 0 ? "ring-2 ring-stone-900" : ""
                   }`}
@@ -350,7 +315,7 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => removePendingImage(img.id)}
+                  onClick={() => markExistingRemoved(img.id)}
                   disabled={loading}
                   className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 shadow hover:bg-white"
                   aria-label={`Remove image ${index + 1}`}
@@ -359,6 +324,35 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
                 </button>
               </div>
             ))}
+            {pendingImages.map((img, index) => {
+              const displayIndex = keptExisting.length + index;
+              return (
+                <div key={img.id} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.previewUrl}
+                    alt={`New ${displayIndex + 1}`}
+                    className={`aspect-square w-full rounded-xl object-cover ${
+                      displayIndex === 0 ? "ring-2 ring-stone-900" : ""
+                    }`}
+                  />
+                  {displayIndex === 0 && keptExisting.length === 0 ? (
+                    <span className="absolute left-1 top-1 rounded bg-stone-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      Cover
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => removePendingImage(img.id)}
+                    disabled={loading}
+                    className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 shadow hover:bg-white"
+                    aria-label={`Remove new image ${displayIndex + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : null}
 
@@ -367,9 +361,12 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
           accept="image/*"
           multiple
           onChange={handleFilesChange}
-          disabled={loading || pendingImages.length >= MAX_IMAGES}
+          disabled={loading || totalImageCount >= MAX_LISTING_IMAGES}
           className="block w-full cursor-pointer rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm text-stone-700 file:mr-4 file:rounded-full file:border-0 file:bg-stone-900 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
         />
+        {imageCountError ? (
+          <p className="mt-1.5 text-sm text-rose-600">{imageCountError}</p>
+        ) : null}
       </div>
 
       <label className="block">
@@ -377,14 +374,11 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         <input
           type="text"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           onBlur={() => markTouched("title")}
-          aria-invalid={Boolean(showError("title"))}
-          aria-describedby={showError("title") ? "title-error" : undefined}
-          className={inputClass(Boolean(showError("title")))}
-          placeholder="What are you selling?"
+          className={listingInputClass(Boolean(showError("title")))}
         />
-        <FieldError message={showError("title") || undefined} id="title-error" />
+        <FieldError message={showError("title") || undefined} />
       </label>
 
       <label className="block">
@@ -392,11 +386,9 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         <textarea
           rows={4}
           value={description}
-          onChange={(event) => setDescription(event.target.value)}
+          onChange={(e) => setDescription(e.target.value)}
           onBlur={() => markTouched("description")}
-          aria-invalid={Boolean(showError("description"))}
-          className={inputClass(Boolean(showError("description")))}
-          placeholder="Condition, authenticity, what’s included…"
+          className={listingInputClass(Boolean(showError("description")))}
         />
         <FieldError message={showError("description") || undefined} />
       </label>
@@ -406,12 +398,11 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
           <span className="mb-2 block text-sm font-medium text-stone-700">Category</span>
           <select
             value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            onChange={(e) => setCategory(e.target.value)}
             onBlur={() => markTouched("category")}
-            aria-invalid={Boolean(showError("category"))}
-            className={inputClass(Boolean(showError("category")))}
+            className={listingInputClass(Boolean(showError("category")))}
           >
-            {categoryOptions.map((option) => (
+            {LISTING_CATEGORY_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -420,21 +411,16 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
           <FieldError message={showError("category") || undefined} />
         </label>
 
-        <label className="block">
+        <div className="block">
           <span className="mb-2 block text-sm font-medium text-stone-700">Starting price</span>
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={startingPrice}
-            onChange={(event) => setStartingPrice(event.target.value)}
-            onBlur={() => markTouched("startingPrice")}
-            aria-invalid={Boolean(showError("startingPrice"))}
-            className={inputClass(Boolean(showError("startingPrice")))}
-            placeholder="500.00"
-          />
-          <FieldError message={showError("startingPrice") || undefined} />
-        </label>
+          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
+            {new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+            }).format(initial.startingPrice)}
+            <p className="mt-1 text-xs text-stone-500">Cannot be changed after listing.</p>
+          </div>
+        </div>
       </div>
 
       <label className="block">
@@ -443,26 +429,22 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
           type="datetime-local"
           value={auctionEnd}
           min={minAuctionEnd}
-          onChange={(event) => setAuctionEnd(event.target.value)}
+          onChange={(e) => setAuctionEnd(e.target.value)}
           onBlur={() => markTouched("auctionEnd")}
-          aria-invalid={Boolean(showError("auctionEnd"))}
-          className={inputClass(Boolean(showError("auctionEnd")))}
+          className={listingInputClass(Boolean(showError("auctionEnd")))}
         />
         <FieldError message={showError("auctionEnd") || undefined} />
         <p className="mt-1.5 text-xs text-stone-500">Must be a future date and time.</p>
       </label>
 
       {formError ? (
-        <p
-          className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-          role="alert"
-        >
+        <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {formError}
         </p>
       ) : null}
 
       {submitAttempted && !isFormValid ? (
-        <p className="text-sm text-stone-600">Please fix the highlighted fields before publishing.</p>
+        <p className="text-sm text-stone-600">Please fix the highlighted fields before saving.</p>
       ) : null}
 
       <button
@@ -470,7 +452,7 @@ export function CreateListingForm({ sellerId }: CreateListingFormProps) {
         disabled={submitDisabled}
         className="w-full rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading ? "Publishing…" : "Publish listing"}
+        {loading ? "Saving…" : "Save changes"}
       </button>
     </form>
   );

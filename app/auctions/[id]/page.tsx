@@ -2,6 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BidForm } from "@/components/bid-form";
+import { ListingImageGallery } from "@/components/listing-image-gallery";
+import { SellerListingActions } from "@/components/seller-listing-actions";
+import {
+  getGalleryImageUrls,
+  LISTING_IMAGES_SELECT,
+  type ListingImageRow,
+} from "@/lib/listing-images";
+import { ProfileAvatar } from "@/components/profile-avatar";
+import { getProfileById } from "@/lib/profile-server";
+import { getProfileDisplayName } from "@/lib/profiles";
+import { FavoriteButton } from "@/components/favorite-button";
+import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { createClient } from "@/lib/supabase/server";
 
 export async function generateMetadata({
@@ -35,6 +47,7 @@ type ListingDetails = {
   seller_id: string;
   created_at: string;
   image_url: string | null;
+  listing_images: ListingImageRow[] | null;
 };
 
 function formatPrice(value: number) {
@@ -65,7 +78,7 @@ export default async function AuctionDetailsPage({
   const { data, error } = await supabase
     .from("listings")
     .select(
-      "id, title, description, category, starting_price, current_price, auction_end, status, seller_id, created_at, image_url"
+      `id, title, description, category, starting_price, current_price, auction_end, status, seller_id, created_at, image_url, listing_images (${LISTING_IMAGES_SELECT})`
     )
     .eq("id", id)
     .single();
@@ -75,6 +88,12 @@ export default async function AuctionDetailsPage({
   }
 
   const listing = data as ListingDetails;
+  const galleryUrls = getGalleryImageUrls(listing.image_url, listing.listing_images);
+  const isSeller = user?.id === listing.seller_id;
+  const sellerProfile = await getProfileById(supabase, listing.seller_id);
+  const sellerName = getProfileDisplayName(sellerProfile, "Seller");
+  const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
+  const isFavorited = isListingFavorited(favoritedIds, listing.id);
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-900">
@@ -95,22 +114,7 @@ export default async function AuctionDetailsPage({
       <section className="mx-auto max-w-6xl px-5 py-10 lg:px-8 lg:py-14">
         <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-              <div className="aspect-square w-full overflow-hidden bg-stone-100">
-                {listing.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={listing.image_url}
-                    alt={listing.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-stone-400">
-                    No image provided
-                  </div>
-                )}
-              </div>
-            </div>
+            <ListingImageGallery images={galleryUrls} title={listing.title} />
 
             <div className="rounded-3xl border border-stone-200 bg-white p-6">
               <p className="text-xs uppercase tracking-wide text-stone-500">{listing.category}</p>
@@ -160,14 +164,34 @@ export default async function AuctionDetailsPage({
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-3xl border border-stone-200 bg-white p-6">
-              <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
-                Current bid
-              </p>
-              <p className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
-                {formatPrice(listing.current_price)}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Current bid
+                  </p>
+                  <p className="mt-1 text-4xl font-semibold tracking-tight text-stone-900">
+                    {formatPrice(listing.current_price)}
+                  </p>
+                </div>
+                {!isSeller ? (
+                  <FavoriteButton
+                    listingId={listing.id}
+                    initialFavorited={isFavorited}
+                    isAuthenticated={Boolean(user)}
+                    userId={user?.id}
+                    isOwner={isSeller}
+                    variant="detail"
+                  />
+                ) : null}
+              </div>
 
-              {!user ? (
+              {isSeller ? (
+                <SellerListingActions
+                  listingId={listing.id}
+                  listingTitle={listing.title}
+                  imageUrls={galleryUrls}
+                />
+              ) : !user ? (
                 <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
                   You need to be signed in to place a bid.{" "}
                   <Link
@@ -188,9 +212,21 @@ export default async function AuctionDetailsPage({
                 />
               )}
 
-              <div className="mt-6 border-t border-stone-200 pt-4 text-xs text-stone-500">
-                Seller ID · <span className="font-mono">{listing.seller_id.slice(0, 8)}…</span>
-              </div>
+              <Link
+                href={`/seller/${listing.seller_id}`}
+                className="mt-6 flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4 transition hover:border-stone-300 hover:bg-stone-100"
+              >
+                <ProfileAvatar profile={sellerProfile} size="sm" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+                    Sold by
+                  </p>
+                  <p className="truncate text-sm font-semibold text-stone-900">{sellerName}</p>
+                  {sellerProfile?.username ? (
+                    <p className="truncate text-xs text-stone-500">@{sellerProfile.username}</p>
+                  ) : null}
+                </div>
+              </Link>
             </div>
           </aside>
         </div>

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AuctionListingCard } from "@/components/auction-listing-card";
+import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
+import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -10,10 +13,12 @@ export const metadata: Metadata = {
 
 type FeaturedListing = {
   id: string;
+  seller_id: string;
   title: string;
   category: string;
   current_price: number;
   image_url: string | null;
+  listing_images: ListingImageRow[] | null;
 };
 
 const categories = [
@@ -25,14 +30,6 @@ const categories = [
   { name: "Memorabilia", emoji: "🏆" },
 ];
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export default async function Home() {
   const supabase = await createClient();
   const {
@@ -42,12 +39,15 @@ export default async function Home() {
 
   const { data: listingsData } = await supabase
     .from("listings")
-    .select("id, title, category, current_price, image_url")
+    .select(
+      `id, seller_id, title, category, current_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+    )
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(6);
 
   const featured = (listingsData ?? []) as FeaturedListing[];
+  const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-900">
@@ -136,35 +136,14 @@ export default async function Home() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((item) => (
-              <Link
+              <AuctionListingCard
                 key={item.id}
-                href={`/auctions/${item.id}`}
-                className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
-              >
-                <div className="aspect-square w-full overflow-hidden bg-stone-100">
-                  {item.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
-                      No image
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <p className="text-xs uppercase tracking-wide text-stone-500">{item.category}</p>
-                  <h3 className="mt-1 line-clamp-1 text-base font-medium text-stone-900">
-                    {item.title}
-                  </h3>
-                  <p className="mt-3 text-lg font-semibold text-stone-900">
-                    {formatPrice(item.current_price)}
-                  </p>
-                </div>
-              </Link>
+                listing={item}
+                favorited={isListingFavorited(favoritedIds, item.id)}
+                isAuthenticated={isAuthenticated}
+                userId={user?.id}
+                showTimeLeft={false}
+              />
             ))}
           </div>
         )}

@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ListingCover } from "@/components/listing-cover";
 import { LogoutButton } from "@/components/logout-button";
+import {
+  getCoverImageUrl,
+  LISTING_IMAGES_SELECT,
+  type ListingImageRow,
+} from "@/lib/listing-images";
+import { getWatchlistCount } from "@/lib/favorites";
+import { getUnreadNotificationCount } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
 
 type MyListing = {
@@ -10,6 +18,7 @@ type MyListing = {
   current_price: number;
   status: string;
   image_url: string | null;
+  listing_images: ListingImageRow[] | null;
 };
 
 function formatPrice(value: number) {
@@ -32,12 +41,16 @@ export default async function DashboardPage() {
 
   const { data: listingsData } = await supabase
     .from("listings")
-    .select("id, title, category, current_price, status, image_url")
+    .select(
+      `id, title, category, current_price, status, image_url, listing_images (${LISTING_IMAGES_SELECT})`
+    )
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false })
     .limit(6);
 
   const myListings = (listingsData ?? []) as MyListing[];
+  const watchlistCount = await getWatchlistCount(supabase, user.id);
+  const unreadNotificationCount = await getUnreadNotificationCount(supabase, user.id);
 
   return (
     <main className="min-h-screen bg-stone-50 text-stone-900">
@@ -47,6 +60,25 @@ export default async function DashboardPage() {
             GoBidMe
           </Link>
           <div className="flex items-center gap-2">
+            <Link
+              href="/watchlist"
+              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+            >
+              Watchlist
+            </Link>
+            <Link
+              href="/notifications"
+              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+            >
+              Notifications
+              {unreadNotificationCount > 0 ? ` (${unreadNotificationCount})` : ""}
+            </Link>
+            <Link
+              href="/profile"
+              className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
+            >
+              Profile
+            </Link>
             <Link
               href="/auctions"
               className="hidden rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-stone-100 sm:inline-flex"
@@ -80,14 +112,20 @@ export default async function DashboardPage() {
             <p className="text-sm text-stone-500">Active bids</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">12</p>
           </article>
-          <article className="rounded-3xl border border-stone-200 bg-white p-5">
+          <Link
+            href="/watchlist"
+            className="rounded-3xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-sm"
+          >
             <p className="text-sm text-stone-500">Watchlist</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">28</p>
-          </article>
-          <article className="rounded-3xl border border-stone-200 bg-white p-5">
-            <p className="text-sm text-stone-500">Won auctions</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">3</p>
-          </article>
+            <p className="mt-3 text-3xl font-semibold tracking-tight">{watchlistCount}</p>
+          </Link>
+          <Link
+            href="/notifications"
+            className="rounded-3xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-sm"
+          >
+            <p className="text-sm text-stone-500">Unread alerts</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight">{unreadNotificationCount}</p>
+          </Link>
         </section>
 
         <section className="mt-10">
@@ -114,25 +152,21 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {myListings.map((listing) => (
+              {myListings.map((listing) => {
+                const coverUrl = getCoverImageUrl(listing.image_url, listing.listing_images);
+
+                return (
                 <Link
                   key={listing.id}
                   href={`/auctions/${listing.id}`}
                   className="group overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:shadow-md"
                 >
                   <div className="aspect-square w-full overflow-hidden bg-stone-100">
-                    {listing.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={listing.image_url}
-                        alt={listing.title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
-                        No image
-                      </div>
-                    )}
+                    <ListingCover
+                      src={coverUrl}
+                      alt={listing.title}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
                   </div>
                   <div className="p-4">
                     <p className="text-xs uppercase tracking-wide text-stone-500">
@@ -151,7 +185,8 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
