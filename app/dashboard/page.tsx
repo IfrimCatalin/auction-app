@@ -16,6 +16,7 @@ import { SellerOrderCard } from "@/components/seller-order-card";
 import { getBuyerOrders, getSellerOrders } from "@/lib/orders";
 import { getShippingAddressesByListingIds } from "@/lib/shipping-addresses";
 import { isUserAdmin } from "@/lib/admin";
+import { getConversationsForUser, getTotalUnreadCount } from "@/lib/messages";
 import { expirePastDueListings } from "@/lib/expire-listings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -44,6 +45,8 @@ export default async function DashboardPage() {
   }
 
   const isAdmin = await isUserAdmin(supabase, user.id);
+  const conversations = await getConversationsForUser(supabase, user.id);
+  const unreadMessages = getTotalUnreadCount(conversations);
 
   await expirePastDueListings(supabase);
 
@@ -75,6 +78,13 @@ export default async function DashboardPage() {
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
           <GobidMeLogo />
           <div className="flex items-center gap-2">
+            <Link
+              href="/messages"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              Messages
+              {unreadMessages > 0 ? ` (${unreadMessages})` : ""}
+            </Link>
             <Link
               href="/orders"
               className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"

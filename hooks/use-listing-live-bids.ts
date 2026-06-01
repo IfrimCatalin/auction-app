@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BidHistoryEntry } from "@/lib/bids";
 import { getListingReserveStatus, type ListingReserveStatus } from "@/lib/reserve-price";
@@ -42,6 +42,16 @@ export function useListingLiveBids({
       initialBids.map((bid) => [bid.bidder_id, bid.bidderLabel])
     );
   }, [listingId, initialCurrentPrice, initialBids, initialListingStatus]);
+
+  const applyOptimisticBid = useCallback((entry: BidHistoryEntry) => {
+    setBids((previous) => mergeBidIntoHistory(previous, entry));
+    setCurrentPrice(entry.amount);
+    setHighlightBidId(entry.id);
+
+    window.setTimeout(() => {
+      setHighlightBidId((current) => (current === entry.id ? null : current));
+    }, 2200);
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -99,5 +109,6 @@ export function useListingLiveBids({
     listingStatus,
     reserveStatus,
     highlightBidId,
+    applyOptimisticBid,
   };
 }

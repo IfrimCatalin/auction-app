@@ -13,8 +13,27 @@ export function getBidIncrementForPrice(currentPrice: number): number {
   return 100;
 }
 
-export function getMinimumBidAmount(currentPrice: number) {
+/** Next valid bid for a given current listing price (current + tiered increment). */
+export function getMinimumBid(currentPrice: number) {
   return currentPrice + getBidIncrementForPrice(currentPrice);
+}
+
+/** @deprecated Use getMinimumBid */
+export function getMinimumBidAmount(currentPrice: number) {
+  return getMinimumBid(currentPrice);
+}
+
+export function getBidQuote(currentPrice: number) {
+  const increment = getBidIncrementForPrice(currentPrice);
+  const minimumBid = getMinimumBid(currentPrice);
+
+  return {
+    increment,
+    minimumBid,
+    minimumBidLabel: formatBidAmount(minimumBid),
+    incrementLabel: formatBidAmount(increment),
+    minimumBidInput: minimumBid.toFixed(2),
+  };
 }
 
 export function formatBidAmount(value: number) {

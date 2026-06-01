@@ -2,6 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BidHistoryEntry } from "@/lib/bids";
 import { getAuctionWinner } from "@/lib/bids";
 import type { ListingReserveStatus } from "@/lib/reserve-price";
+import type { OrderStatus } from "@/lib/orders";
+import {
+  isOrderPaymentComplete,
+  type PaymentStatus,
+} from "@/lib/order-payments";
 
 export type Review = {
   id: string;
@@ -48,6 +53,8 @@ export function canUserLeaveReview(options: {
   userId: string | undefined;
   sellerId: string;
   existingReview: Review | null;
+  orderPaymentStatus?: PaymentStatus | null;
+  orderStatus?: OrderStatus | null;
 }): boolean {
   if (!options.isEnded) return false;
   if (!options.userId) return false;
@@ -56,6 +63,12 @@ export function canUserLeaveReview(options: {
   if (!options.winningBid) return false;
   if (options.winningBid.bidder_id !== options.userId) return false;
   if (options.existingReview) return false;
+  if (!options.orderPaymentStatus || !isOrderPaymentComplete(options.orderPaymentStatus)) {
+    return false;
+  }
+  if (options.orderStatus !== "delivered") {
+    return false;
+  }
   return true;
 }
 

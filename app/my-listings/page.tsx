@@ -22,7 +22,7 @@ import {
 } from "@/lib/seller-listing-sale";
 import { SellerBuyerShippingPanel } from "@/components/seller-buyer-shipping-panel";
 import { OrderStatusBadge } from "@/components/order-status-badge";
-import { SellerOrderStatusSelect } from "@/components/seller-order-status-select";
+import { SellerOrderFulfillment } from "@/components/seller-order-fulfillment";
 import { SellerOrderCard } from "@/components/seller-order-card";
 import { getOrdersByListingIds, getSellerOrders } from "@/lib/orders";
 import { getShippingAddressesByListingIds } from "@/lib/shipping-addresses";
@@ -288,11 +288,7 @@ export default async function MyListingsPage() {
                     {saleStatus === "sold" ? (
                       <div className="space-y-0 border-t border-border px-4 pb-4">
                         {listingOrder ? (
-                          <SellerOrderStatusSelect
-                            orderId={listingOrder.id}
-                            currentStatus={listingOrder.status}
-                            compact
-                          />
+                          <SellerOrderFulfillment order={listingOrder} compact />
                         ) : null}
                         <SellerBuyerShippingPanel
                           address={buyerAddress}

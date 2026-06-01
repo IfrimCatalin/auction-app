@@ -6,6 +6,7 @@ import { BidForm } from "@/components/bid-form";
 import { BidHistory } from "@/components/bid-history";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ProfileAvatar } from "@/components/profile-avatar";
+import { MessageUserButton } from "@/components/message-user-button";
 import { SellerListingActions } from "@/components/seller-listing-actions";
 import { useAuctionCountdown } from "@/hooks/use-auction-countdown";
 import { isListingAuctionClosed } from "@/lib/expire-listings";
@@ -20,8 +21,9 @@ import { getAuctionOutcome } from "@/lib/auction-outcome";
 import { SellerBuyerShippingPanel } from "@/components/seller-buyer-shipping-panel";
 import { canUserLeaveReview, getWinningBidForReview, type Review } from "@/lib/reviews";
 import type { ShippingAddress } from "@/lib/shipping-addresses";
+import { BuyerOrderDelivery } from "@/components/buyer-order-delivery";
 import { BuyerOrderStatusTracker } from "@/components/buyer-order-status-tracker";
-import { SellerOrderStatusSelect } from "@/components/seller-order-status-select";
+import { SellerOrderFulfillment } from "@/components/seller-order-fulfillment";
 import type { Order } from "@/lib/orders";
 
 type ListingAuctionSidebarProps = {
@@ -73,6 +75,7 @@ export function ListingAuctionSidebar({
     listingStatus: liveListingStatus,
     reserveStatus,
     highlightBidId,
+    applyOptimisticBid,
   } = useListingLiveBids({
     listingId,
     initialCurrentPrice: currentPrice,
@@ -98,6 +101,8 @@ export function ListingAuctionSidebar({
       userId: user?.id,
       sellerId,
       existingReview,
+      orderPaymentStatus: listingOrder?.payment_status ?? null,
+      orderStatus: listingOrder?.status ?? null,
     });
   const showExistingReview = isEnded && Boolean(user) && Boolean(existingReview);
   const showReviewSection = showLeaveReview || showExistingReview;
@@ -170,6 +175,7 @@ export function ListingAuctionSidebar({
           bidderId={user.id}
           listingStatus={liveListingStatus}
           listingIsHidden={listingIsHidden}
+          onBidPlaced={(entry) => applyOptimisticBid(entry)}
         />
       ) : null}
 
@@ -181,11 +187,24 @@ export function ListingAuctionSidebar({
       />
 
       {isEnded && isSeller && outcome === "sold" && listingOrder ? (
-        <SellerOrderStatusSelect orderId={listingOrder.id} currentStatus={listingOrder.status} />
+        <SellerOrderFulfillment order={listingOrder} />
       ) : null}
 
       {isEnded && isWinner && listingOrder ? (
-        <BuyerOrderStatusTracker status={listingOrder.status} />
+        <>
+          <BuyerOrderStatusTracker status={listingOrder.status} />
+          <BuyerOrderDelivery
+            order={{
+              orderId: listingOrder.id,
+              listingId: listingOrder.listing_id,
+              status: listingOrder.status,
+              trackingNumber: listingOrder.tracking_number,
+              shippingCarrier: listingOrder.shipping_carrier,
+              shippedAt: listingOrder.shipped_at,
+              deliveredAt: listingOrder.delivered_at,
+            }}
+          />
+        </>
       ) : null}
 
       {isEnded && isSeller && outcome === "sold" ? (
@@ -215,9 +234,15 @@ export function ListingAuctionSidebar({
         </div>
       ) : null}
 
+      {!isSeller && user ? (
+        <div className="mt-6">
+          <MessageUserButton listingId={listingId} label="Message seller" />
+        </div>
+      ) : null}
+
       <Link
         href={`/seller/${sellerId}`}
-        className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-page p-4 transition hover:border-accent/40 hover:bg-page-dark"
+        className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-page p-4 transition hover:border-accent/40 hover:bg-page-dark"
       >
         <ProfileAvatar profile={sellerProfile} size="sm" />
         <div className="min-w-0">

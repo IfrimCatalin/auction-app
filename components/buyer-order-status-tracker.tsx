@@ -63,7 +63,7 @@ export function BuyerOrderStatusTracker({ status }: BuyerOrderStatusTrackerProps
       </ol>
 
       <p className="mt-3 text-xs text-muted">
-        Payment processing is not connected yet — the seller updates status manually.
+        Pay for your order, then track shipment and confirm delivery when it arrives.
       </p>
     </div>
   );

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ListingCover } from "@/components/listing-cover";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { SellerBuyerShippingPanel } from "@/components/seller-buyer-shipping-panel";
-import { SellerOrderStatusSelect } from "@/components/seller-order-status-select";
+import { SellerOrderFulfillment } from "@/components/seller-order-fulfillment";
+import { PaymentStatusBadge } from "@/components/payment-status-badge";
+import { MessageUserButton } from "@/components/message-user-button";
 import { formatListingPrice } from "@/lib/listing-price";
 import type { SellerOrderView } from "@/lib/orders";
 import type { ShippingAddress } from "@/lib/shipping-addresses";
@@ -63,7 +65,10 @@ export function SellerOrderCard({
                 Buyer: <span className="font-medium text-ink">{buyerLabel}</span>
               </p>
             </div>
-            <OrderStatusBadge status={order.status} />
+            <div className="flex flex-col items-end gap-1.5">
+              <OrderStatusBadge status={order.status} />
+              <PaymentStatusBadge status={order.payment_status} size="sm" />
+            </div>
           </div>
 
           <p className="mt-4 text-[11px] font-medium uppercase tracking-wide text-muted">
@@ -73,11 +78,7 @@ export function SellerOrderCard({
             {formatListingPrice(order.final_price)}
           </p>
 
-          <SellerOrderStatusSelect
-            orderId={order.id}
-            currentStatus={order.status}
-            compact
-          />
+          <SellerOrderFulfillment order={order} compact />
 
           <SellerBuyerShippingPanel
             address={shippingAddress}
@@ -85,12 +86,20 @@ export function SellerOrderCard({
             compact
           />
 
-          <Link
-            href={`/auctions/${order.listing_id}`}
-            className="mt-4 inline-flex w-fit rounded-full border border-border bg-page px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/40"
-          >
-            View listing
-          </Link>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <MessageUserButton
+              listingId={order.listing_id}
+              buyerId={order.buyer_id}
+              label="Message buyer"
+              compact
+            />
+            <Link
+              href={`/auctions/${order.listing_id}`}
+              className="inline-flex rounded-full border border-border bg-page px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/40"
+            >
+              View listing
+            </Link>
+          </div>
         </div>
       </div>
     </article>

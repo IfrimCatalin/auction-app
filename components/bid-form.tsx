@@ -5,8 +5,9 @@ import { useAuctionCountdown } from "@/hooks/use-auction-countdown";
 import { isListingAuctionClosed } from "@/lib/expire-listings";
 import {
   formatBidAmount,
-  getBidIncrementForPrice,
-  getMinimumBidAmount,
+  getBidQuote,
+  getMinimumBid,
+  type BidHistoryEntry,
 } from "@/lib/bids";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,6 +19,7 @@ export type BidFormProps = {
   bidderId: string;
   listingStatus: string;
   listingIsHidden?: boolean;
+  onBidPlaced?: (entry: BidHistoryEntry, newCurrentPrice: number) => void;
 };
 
 function friendlyBidError(
@@ -56,6 +58,7 @@ export function BidForm({
   bidderId,
   listingStatus,
   listingIsHidden = false,
+  onBidPlaced,
 }: BidFormProps) {
   const supabase = createClient();
 
@@ -81,21 +84,17 @@ export function BidForm({
         ? "This listing isn’t accepting bids right now."
         : "";
 
-  const minimumIncrement = useMemo(
-    () => getBidIncrementForPrice(currentPrice),
-    [currentPrice]
-  );
-  const minimumBid = useMemo(() => getMinimumBidAmount(currentPrice), [currentPrice]);
-  const minimumBidLabel = useMemo(() => formatBidAmount(minimumBid), [minimumBid]);
-  const incrementLabel = useMemo(() => formatBidAmount(minimumIncrement), [minimumIncrement]);
-  const minimumBidInput = useMemo(() => minimumBid.toFixed(2), [minimumBid]);
+  const bidQuote = useMemo(() => getBidQuote(currentPrice), [currentPrice]);
 
   const parsedAmount = useMemo(() => {
     const value = Number(amount);
     return Number.isFinite(value) ? value : null;
   }, [amount]);
 
-  const isBelowMinimum = parsedAmount !== null && parsedAmount + 0.001 < minimumBid;
+  const isBelowMinimum =
+    message?.type !== "success" &&
+    parsedAmount !== null &&
+    parsedAmount + 0.001 < bidQuote.minimumBid;
 
   const canSubmit =
     !formDisabled && !loading && parsedAmount !== null && !isBelowMinimum;
@@ -114,37 +113,60 @@ export function BidForm({
       return;
     }
 
-    if (isBelowMinimum) {
+    if (parsedAmount + 0.001 < bidQuote.minimumBid) {
       setMessage({
         type: "error",
-        text: `Your bid must be at least ${minimumBidLabel} (minimum increment ${incrementLabel}).`,
+        text: `Your bid must be at least ${bidQuote.minimumBidLabel} (minimum increment ${bidQuote.incrementLabel}).`,
       });
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.from("bids").insert({
-      listing_id: listingId,
-      bidder_id: bidderId,
-      amount: parsedAmount,
-    });
+    const { data, error } = await supabase
+      .from("bids")
+      .insert({
+        listing_id: listingId,
+        bidder_id: bidderId,
+        amount: parsedAmount,
+      })
+      .select("id, amount, created_at, bidder_id")
+      .single();
 
     if (error) {
       setMessage({
         type: "error",
-        text: friendlyBidError(error.message, minimumBidLabel, incrementLabel),
+        text: friendlyBidError(error.message, bidQuote.minimumBidLabel, bidQuote.incrementLabel),
       });
       setLoading(false);
       return;
     }
 
-    setAmount("");
+    const newCurrentPrice = Number(data.amount);
+    const entry: BidHistoryEntry = {
+      id: data.id,
+      amount: newCurrentPrice,
+      created_at: data.created_at,
+      bidder_id: data.bidder_id,
+      bidderLabel: "You",
+    };
+
+    onBidPlaced?.(entry, newCurrentPrice);
+
+    const nextMinimum = getMinimumBid(newCurrentPrice);
+    setAmount(nextMinimum.toFixed(2));
     setMessage({
       type: "success",
-      text: `Your bid of ${formatBidAmount(parsedAmount)} was placed.`,
+      text: `Your bid of ${formatBidAmount(newCurrentPrice)} was placed.`,
     });
     setLoading(false);
+  };
+
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    if (message?.type === "success") {
+      setMessage(null);
+    }
   };
 
   return (
@@ -154,20 +176,20 @@ export function BidForm({
         <input
           type="number"
           required
-          min={minimumBidInput}
+          min={bidQuote.minimumBidInput}
           step="0.01"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => handleAmountChange(e.target.value)}
           disabled={formDisabled || loading}
-          placeholder={minimumBidLabel}
+          placeholder={bidQuote.minimumBidLabel}
           aria-describedby="bid-minimum-help"
           className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent disabled:cursor-not-allowed disabled:bg-page disabled:text-muted"
         />
         <p id="bid-minimum-help" className="mt-2 text-xs leading-relaxed text-muted">
           Minimum bid:{" "}
-          <span className="font-medium text-ink">{minimumBidLabel}</span>
+          <span className="font-medium text-ink">{bidQuote.minimumBidLabel}</span>
           <span className="text-muted/80"> · Minimum increment: </span>
-          <span className="font-medium text-ink">{incrementLabel}</span>
+          <span className="font-medium text-ink">{bidQuote.incrementLabel}</span>
         </p>
       </label>
 
@@ -179,7 +201,7 @@ export function BidForm({
 
       {!formDisabled && isBelowMinimum ? (
         <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
-          Enter at least {minimumBidLabel} to place a bid.
+          Enter at least {bidQuote.minimumBidLabel} to place a bid.
         </p>
       ) : null}
 

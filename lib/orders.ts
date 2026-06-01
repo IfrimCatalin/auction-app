@@ -10,6 +10,7 @@ import {
   type ShippingAddress,
 } from "@/lib/shipping-addresses";
 import { expirePastDueListings } from "@/lib/expire-listings";
+import { parsePaymentStatus, type PaymentStatus } from "@/lib/order-payments";
 
 export const ORDER_STATUSES = [
   "awaiting_payment",
@@ -29,6 +30,14 @@ export type Order = {
   buyer_id: string;
   final_price: number;
   status: OrderStatus;
+  payment_status: PaymentStatus;
+  paid_at: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
+  tracking_number: string | null;
+  shipping_carrier: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -44,7 +53,15 @@ export type BuyerOrderView = {
   sellerName: string;
   sellerUsername: string | null;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  paymentReference: string | null;
   shippingAddress: ShippingAddress | null;
+  trackingNumber: string | null;
+  shippingCarrier: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
   updatedAt: string;
 };
 
@@ -57,7 +74,45 @@ export type SellerOrderView = {
 };
 
 const ORDER_SELECT =
-  "id, listing_id, seller_id, buyer_id, final_price, status, created_at, updated_at";
+  "id, listing_id, seller_id, buyer_id, final_price, status, payment_status, paid_at, payment_method, payment_reference, tracking_number, shipping_carrier, shipped_at, delivered_at, created_at, updated_at";
+
+function mapOrderRow(row: {
+  id: string;
+  listing_id: string;
+  seller_id: string;
+  buyer_id: string;
+  final_price: number;
+  status: string;
+  payment_status?: string;
+  paid_at?: string | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  tracking_number?: string | null;
+  shipping_carrier?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}): Order {
+  return {
+    id: row.id,
+    listing_id: row.listing_id,
+    seller_id: row.seller_id,
+    buyer_id: row.buyer_id,
+    final_price: Number(row.final_price),
+    status: parseOrderStatus(row.status),
+    payment_status: parsePaymentStatus(row.payment_status ?? "unpaid"),
+    paid_at: row.paid_at ?? null,
+    payment_method: row.payment_method ?? null,
+    payment_reference: row.payment_reference ?? null,
+    tracking_number: row.tracking_number ?? null,
+    shipping_carrier: row.shipping_carrier ?? null,
+    shipped_at: row.shipped_at ?? null,
+    delivered_at: row.delivered_at ?? null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 type ListingJoin = {
   id: string;
@@ -187,7 +242,15 @@ export async function getBuyerOrders(
         sellerName: getProfileDisplayName(sellerProfile, "Seller"),
         sellerUsername: sellerProfile?.username?.trim() ?? null,
         status: parseOrderStatus(row.status),
+        paymentStatus: parsePaymentStatus(row.payment_status ?? "unpaid"),
+        paidAt: row.paid_at ?? null,
+        paymentMethod: row.payment_method ?? null,
+        paymentReference: row.payment_reference ?? null,
         shippingAddress: shippingByListingId.get(row.listing_id) ?? null,
+        trackingNumber: row.tracking_number ?? null,
+        shippingCarrier: row.shipping_carrier ?? null,
+        shippedAt: row.shipped_at ?? null,
+        deliveredAt: row.delivered_at ?? null,
         updatedAt: row.updated_at,
       };
     })
@@ -239,16 +302,7 @@ export async function getSellerOrders(
         : buyerProfile?.full_name?.trim() || "Buyer";
 
       return {
-        order: {
-          id: row.id,
-          listing_id: row.listing_id,
-          seller_id: row.seller_id,
-          buyer_id: row.buyer_id,
-          final_price: Number(row.final_price),
-          status: parseOrderStatus(row.status),
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-        },
+        order: mapOrderRow(row),
         listingTitle: listing.title,
         coverUrl: getCoverImageUrl(listing.image_url, listing.listing_images),
         auctionEndedAt: listing.auction_end,
@@ -278,9 +332,9 @@ export async function getOrdersByListingIds(
   }
 
   return new Map(
-    (data as Order[]).map((order) => [
+    (data as Parameters<typeof mapOrderRow>[0][]).map((order) => [
       order.listing_id,
-      { ...order, status: parseOrderStatus(order.status) },
+      mapOrderRow(order),
     ])
   );
 }
@@ -301,5 +355,69 @@ export async function getOrderForListing(
     return null;
   }
 
-  return { ...(data as Order), status: parseOrderStatus(data.status) };
+  return mapOrderRow(data as Parameters<typeof mapOrderRow>[0]);
+}
+
+export async function getBuyerOrderById(
+  supabase: SupabaseClient,
+  orderId: string,
+  buyerId: string
+): Promise<BuyerOrderView | null> {
+  await ensureAuctionOrdersSynced(supabase);
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      `${ORDER_SELECT}, listings ( id, title, auction_end, image_url, listing_images (${LISTING_IMAGES_SELECT}) )`
+    )
+    .eq("id", orderId)
+    .eq("buyer_id", buyerId)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("[getBuyerOrderById]", error.message);
+    return null;
+  }
+
+  const row = data as OrderWithListing;
+  const listing = getListingFromJoin(row);
+  if (!listing) return null;
+
+  const { data: sellerProfile } = await supabase
+    .from("profiles")
+    .select("id, username, full_name")
+    .eq("id", row.seller_id)
+    .maybeSingle();
+
+  const shippingByListingId = await getShippingAddressesForListings(
+    supabase,
+    buyerId,
+    [row.listing_id]
+  );
+
+  return {
+    orderId: row.id,
+    listingId: row.listing_id,
+    title: listing.title,
+    coverUrl: getCoverImageUrl(listing.image_url, listing.listing_images),
+    finalPrice: Number(row.final_price),
+    auctionEndedAt: listing.auction_end,
+    sellerId: row.seller_id,
+    sellerName: getProfileDisplayName(
+      sellerProfile as { username: string | null; full_name: string | null } | null,
+      "Seller"
+    ),
+    sellerUsername: sellerProfile?.username?.trim() ?? null,
+    status: parseOrderStatus(row.status),
+    paymentStatus: parsePaymentStatus(row.payment_status ?? "unpaid"),
+    paidAt: row.paid_at ?? null,
+    paymentMethod: row.payment_method ?? null,
+    paymentReference: row.payment_reference ?? null,
+    shippingAddress: shippingByListingId.get(row.listing_id) ?? null,
+    trackingNumber: row.tracking_number ?? null,
+    shippingCarrier: row.shipping_carrier ?? null,
+    shippedAt: row.shipped_at ?? null,
+    deliveredAt: row.delivered_at ?? null,
+    updatedAt: row.updated_at,
+  };
 }
