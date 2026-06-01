@@ -7,6 +7,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { isListingFavorited } from "@/lib/favorites";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
 import { getListingReserveStatus, type ListingReserveStatus } from "@/lib/reserve-price";
+import { expirePastDueListings } from "@/lib/expire-listings";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -38,6 +39,8 @@ export default async function WatchlistPage() {
   if (!user) {
     redirect("/login");
   }
+
+  await expirePastDueListings(supabase);
 
   const { data: favoriteRows, error: favoritesError } = await supabase
     .from("favorites")
@@ -86,6 +89,12 @@ export default async function WatchlistPage() {
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
           <GobidMeLogo />
           <div className="flex items-center gap-2">
+            <Link
+              href="/orders"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              Orders
+            </Link>
             <Link
               href="/my-listings"
               className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"

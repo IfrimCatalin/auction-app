@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { GobidMeLogo } from "@/components/gobidme-logo";
-import { AuctionListingCard } from "@/components/auction-listing-card";
+import { AuctionsLiveGrid } from "@/components/auctions-live-grid";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_CATEGORY_OPTIONS } from "@/lib/listing-form";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
@@ -86,6 +86,8 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
   if (selectedCategory !== "all") {
     query = query.eq("category", selectedCategory);
   }
+
+  query = query.eq("is_hidden", false).neq("status", "cancelled");
 
   if (selectedStatus === "active") {
     query = query.eq("status", "active").gt("auction_end", new Date().toISOString());
@@ -262,17 +264,12 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((listing) => (
-            <AuctionListingCard
-              key={listing.id}
-              listing={listing}
-              favorited={isListingFavorited(favoritedIds, listing.id)}
-              isAuthenticated={Boolean(user)}
-              userId={user?.id}
-            />
-          ))}
-        </div>
+        <AuctionsLiveGrid
+          listings={listings}
+          favoritedIds={[...favoritedIds]}
+          isAuthenticated={Boolean(user)}
+          userId={user?.id}
+        />
       </section>
     </main>
   );

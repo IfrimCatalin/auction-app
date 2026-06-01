@@ -67,6 +67,28 @@ export function getBidHistoryBidderLabel(
   return "Bidder";
 }
 
+export type BidRowCore = {
+  id: string;
+  amount: number;
+  created_at: string;
+  bidder_id: string;
+};
+
+export function getWinningBidFromRows(
+  bids: BidRowCore[] | null | undefined
+): BidRowCore | null {
+  if (!bids?.length) return null;
+  return bids.reduce((best, bid) => {
+    if (bid.amount > best.amount) return bid;
+    if (bid.amount === best.amount) {
+      return new Date(bid.created_at).getTime() > new Date(best.created_at).getTime()
+        ? bid
+        : best;
+    }
+    return best;
+  }, bids[0]);
+}
+
 export function getWinningBid(bids: BidHistoryEntry[]): BidHistoryEntry | null {
   if (bids.length === 0) return null;
   return bids.reduce((best, bid) => {

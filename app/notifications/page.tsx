@@ -44,6 +44,12 @@ export default async function NotificationsPage() {
           <GobidMeLogo />
           <div className="flex items-center gap-2">
             <Link
+              href="/orders"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              Orders
+            </Link>
+            <Link
               href="/my-listings"
               className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
             >

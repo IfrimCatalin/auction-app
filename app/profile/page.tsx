@@ -44,6 +44,12 @@ export default async function ProfilePage() {
           <GobidMeLogo />
           <div className="flex items-center gap-3 text-sm">
             <Link
+              href="/orders"
+              className="font-medium text-muted transition hover:text-ink"
+            >
+              Orders
+            </Link>
+            <Link
               href="/my-listings"
               className="font-medium text-muted transition hover:text-ink"
             >

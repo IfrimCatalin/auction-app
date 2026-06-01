@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuctionCountdown } from "@/hooks/use-auction-countdown";
 import { isListingAuctionClosed } from "@/lib/expire-listings";
 import {
@@ -18,6 +17,7 @@ export type BidFormProps = {
   auctionEnd: string;
   bidderId: string;
   listingStatus: string;
+  listingIsHidden?: boolean;
 };
 
 function friendlyBidError(
@@ -55,8 +55,8 @@ export function BidForm({
   auctionEnd,
   bidderId,
   listingStatus,
+  listingIsHidden = false,
 }: BidFormProps) {
-  const router = useRouter();
   const supabase = createClient();
 
   const [amount, setAmount] = useState("");
@@ -66,7 +66,9 @@ export function BidForm({
   );
 
   const { isEnded: countdownEnded } = useAuctionCountdown(auctionEnd);
-  const auctionClosed = countdownEnded || isListingAuctionClosed(listingStatus, auctionEnd);
+  const auctionClosed =
+    countdownEnded ||
+    isListingAuctionClosed(listingStatus, auctionEnd, Date.now(), listingIsHidden);
   const isSeller = bidderId === sellerId;
   const listingInactive = listingStatus !== "active";
   const formDisabled = auctionClosed || isSeller || listingInactive;
@@ -143,7 +145,6 @@ export function BidForm({
       text: `Your bid of ${formatBidAmount(parsedAmount)} was placed.`,
     });
     setLoading(false);
-    router.refresh();
   };
 
   return (

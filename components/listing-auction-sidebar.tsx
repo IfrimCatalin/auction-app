@@ -10,12 +10,19 @@ import { SellerListingActions } from "@/components/seller-listing-actions";
 import { useAuctionCountdown } from "@/hooks/use-auction-countdown";
 import { isListingAuctionClosed } from "@/lib/expire-listings";
 import type { BidHistoryEntry } from "@/lib/bids";
-import { formatListingPrice } from "@/lib/listing-price";
+import { LivePrice } from "@/components/live-price";
 import { ListingReserveBadge } from "@/components/listing-reserve-badge";
-import type { ListingReserveStatus } from "@/lib/reserve-price";
+import { useListingLiveBids } from "@/hooks/use-listing-live-bids";
 import type { Profile } from "@/lib/profiles";
+import { AuctionOutcomePanel } from "@/components/auction-outcome-panel";
 import { ListingReviewSection } from "@/components/listing-review-section";
+import { getAuctionOutcome } from "@/lib/auction-outcome";
+import { SellerBuyerShippingPanel } from "@/components/seller-buyer-shipping-panel";
 import { canUserLeaveReview, getWinningBidForReview, type Review } from "@/lib/reviews";
+import type { ShippingAddress } from "@/lib/shipping-addresses";
+import { BuyerOrderStatusTracker } from "@/components/buyer-order-status-tracker";
+import { SellerOrderStatusSelect } from "@/components/seller-order-status-select";
+import type { Order } from "@/lib/orders";
 
 type ListingAuctionSidebarProps = {
   listingId: string;
@@ -23,6 +30,7 @@ type ListingAuctionSidebarProps = {
   currentPrice: number;
   auctionEnd: string;
   listingStatus: string;
+  listingIsHidden?: boolean;
   sellerId: string;
   sellerName: string;
   sellerProfile: Profile | null;
@@ -31,8 +39,11 @@ type ListingAuctionSidebarProps = {
   isFavorited: boolean;
   bidHistory: BidHistoryEntry[];
   imageUrls: string[];
-  reserveStatus: ListingReserveStatus;
+  reservePrice: number | null;
   existingReview: Review | null;
+  winnerProfile: Profile | null;
+  buyerShippingAddress: ShippingAddress | null;
+  listingOrder: Order | null;
 };
 
 export function ListingAuctionSidebar({
@@ -41,6 +52,7 @@ export function ListingAuctionSidebar({
   currentPrice,
   auctionEnd,
   listingStatus,
+  listingIsHidden = false,
   sellerId,
   sellerName,
   sellerProfile,
@@ -49,14 +61,33 @@ export function ListingAuctionSidebar({
   isFavorited,
   bidHistory,
   imageUrls,
-  reserveStatus,
+  reservePrice,
   existingReview,
+  winnerProfile,
+  buyerShippingAddress,
+  listingOrder,
 }: ListingAuctionSidebarProps) {
+  const {
+    currentPrice: liveCurrentPrice,
+    bids: liveBids,
+    listingStatus: liveListingStatus,
+    reserveStatus,
+    highlightBidId,
+  } = useListingLiveBids({
+    listingId,
+    initialCurrentPrice: currentPrice,
+    initialBids: bidHistory,
+    initialListingStatus: listingStatus,
+    reservePrice,
+  });
+
   const { isEnded: countdownEnded } = useAuctionCountdown(auctionEnd);
   const isEnded =
-    countdownEnded || isListingAuctionClosed(listingStatus, auctionEnd);
+    countdownEnded || isListingAuctionClosed(liveListingStatus, auctionEnd);
 
-  const winningBid = getWinningBidForReview(bidHistory, reserveStatus, isEnded);
+  const winningBid = getWinningBidForReview(liveBids, reserveStatus, isEnded);
+  const outcome = getAuctionOutcome(liveBids, reserveStatus, isEnded);
+  const isWinner = Boolean(user && winningBid && user.id === winningBid.bidder_id);
   const showLeaveReview =
     isEnded &&
     Boolean(user) &&
@@ -76,9 +107,7 @@ export function ListingAuctionSidebar({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Current bid</p>
-          <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-ink">
-            {formatListingPrice(currentPrice)}
-          </p>
+          <LivePrice value={liveCurrentPrice} size="lg" className="mt-1" />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <AuctionCountdown auctionEnd={auctionEnd} size="lg" />
             <ListingReserveBadge status={reserveStatus} size="md" />
@@ -102,6 +131,20 @@ export function ListingAuctionSidebar({
         </p>
       ) : null}
 
+      {isEnded ? (
+        <AuctionOutcomePanel
+          outcome={outcome}
+          winningBid={winningBid}
+          finalPrice={liveCurrentPrice}
+          isSeller={isSeller}
+          isWinner={isWinner}
+          sellerId={sellerId}
+          sellerName={sellerName}
+          sellerProfile={sellerProfile}
+          winnerProfile={winnerProfile}
+        />
+      ) : null}
+
       {!isEnded && isSeller ? (
         <SellerListingActions
           listingId={listingId}
@@ -121,15 +164,36 @@ export function ListingAuctionSidebar({
       ) : !isEnded && user ? (
         <BidForm
           listingId={listingId}
-          currentPrice={currentPrice}
+          currentPrice={liveCurrentPrice}
           sellerId={sellerId}
           auctionEnd={auctionEnd}
           bidderId={user.id}
-          listingStatus={listingStatus}
+          listingStatus={liveListingStatus}
+          listingIsHidden={listingIsHidden}
         />
       ) : null}
 
-      <BidHistory bids={bidHistory} isEnded={isEnded} reserveStatus={reserveStatus} />
+      <BidHistory
+        bids={liveBids}
+        isEnded={isEnded}
+        reserveStatus={reserveStatus}
+        highlightBidId={highlightBidId}
+      />
+
+      {isEnded && isSeller && outcome === "sold" && listingOrder ? (
+        <SellerOrderStatusSelect orderId={listingOrder.id} currentStatus={listingOrder.status} />
+      ) : null}
+
+      {isEnded && isWinner && listingOrder ? (
+        <BuyerOrderStatusTracker status={listingOrder.status} />
+      ) : null}
+
+      {isEnded && isSeller && outcome === "sold" ? (
+        <SellerBuyerShippingPanel
+          address={buyerShippingAddress}
+          buyerLabel={winningBid?.bidderLabel ?? null}
+        />
+      ) : null}
 
       {showReviewSection && user ? (
         <ListingReviewSection

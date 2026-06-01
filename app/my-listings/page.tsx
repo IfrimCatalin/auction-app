@@ -13,6 +13,19 @@ import {
   LISTING_IMAGES_SELECT,
   type ListingImageRow,
 } from "@/lib/listing-images";
+import { SellerListingSaleBadge } from "@/components/seller-listing-sale-badge";
+import { getBidderDisplayLabel, getWinningBidFromRows } from "@/lib/bids";
+import { expirePastDueListings } from "@/lib/expire-listings";
+import {
+  getSellerListingSaleStatus,
+  type SellerListingSaleStatus,
+} from "@/lib/seller-listing-sale";
+import { SellerBuyerShippingPanel } from "@/components/seller-buyer-shipping-panel";
+import { OrderStatusBadge } from "@/components/order-status-badge";
+import { SellerOrderStatusSelect } from "@/components/seller-order-status-select";
+import { SellerOrderCard } from "@/components/seller-order-card";
+import { getOrdersByListingIds, getSellerOrders } from "@/lib/orders";
+import { getShippingAddressesByListingIds } from "@/lib/shipping-addresses";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -27,9 +40,10 @@ type SellerListing = {
   current_price: number;
   auction_end: string;
   status: string;
+  reserve_price: number | null;
   image_url: string | null;
   listing_images: ListingImageRow[] | null;
-  bids: { amount: number }[] | null;
+  bids: { id: string; amount: number; created_at: string; bidder_id: string }[] | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -49,11 +63,17 @@ function getDisplayPrice(listing: SellerListing) {
   return getListingDisplayPrice(listing.current_price, listing.bids);
 }
 
-function statusClass(status: string) {
-  if (status === "active") {
-    return "bg-accent/10 text-accent";
-  }
-  return "bg-page-dark text-ink/90";
+function priceLabel(saleStatus: SellerListingSaleStatus) {
+  return saleStatus === "sold" ? "Sale price" : "Current bid";
+}
+
+function getWinnerLabel(
+  listing: SellerListing,
+  profileById: Map<string, { username: string | null; full_name: string | null }>
+) {
+  const winner = getWinningBidFromRows(listing.bids);
+  if (!winner) return null;
+  return getBidderDisplayLabel(profileById.get(winner.bidder_id));
 }
 
 export default async function MyListingsPage() {
@@ -67,15 +87,49 @@ export default async function MyListingsPage() {
     redirect("/login");
   }
 
+  await expirePastDueListings(supabase);
+
   const { data, error } = await supabase
     .from("listings")
     .select(
-      `id, title, category, current_price, auction_end, status, image_url, listing_images (${LISTING_IMAGES_SELECT}), bids ( amount )`
+      `id, title, category, current_price, auction_end, status, reserve_price, image_url, listing_images (${LISTING_IMAGES_SELECT}), bids ( id, amount, created_at, bidder_id )`
     )
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false });
 
   const listings = (data ?? []) as SellerListing[];
+
+  const soldListings = listings.filter(
+    (listing) => getSellerListingSaleStatus(listing) === "sold"
+  );
+  const winnerIds = soldListings
+    .map((listing) => getWinningBidFromRows(listing.bids)?.bidder_id)
+    .filter((id): id is string => Boolean(id));
+
+  const { data: winnerProfiles } =
+    winnerIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, username, full_name")
+          .in("id", [...new Set(winnerIds)])
+      : { data: [] };
+
+  const winnerProfileById = new Map(
+    (winnerProfiles ?? []).map((profile) => [
+      profile.id as string,
+      profile as { username: string | null; full_name: string | null },
+    ])
+  );
+
+  const sellerOrders = await getSellerOrders(supabase, user.id);
+  const soldListingIds = soldListings.map((listing) => listing.id);
+  const orderListingIds = sellerOrders.map((item) => item.order.listing_id);
+  const allShippingListingIds = [...new Set([...soldListingIds, ...orderListingIds])];
+
+  const [shippingByListingId, ordersByListingId] = await Promise.all([
+    getShippingAddressesByListingIds(supabase, allShippingListingIds),
+    getOrdersByListingIds(supabase, soldListingIds),
+  ]);
 
   return (
     <main className="min-h-screen bg-page text-ink">
@@ -83,6 +137,12 @@ export default async function MyListingsPage() {
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
           <GobidMeLogo />
           <div className="flex items-center gap-2">
+            <Link
+              href="/orders"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              Orders
+            </Link>
             <Link
               href="/dashboard"
               className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
@@ -135,10 +195,41 @@ export default async function MyListingsPage() {
           </div>
         ) : null}
 
+        {!error && sellerOrders.length > 0 ? (
+          <section className="mt-10">
+            <h2 className="text-xl font-semibold tracking-tight text-accent">Sold orders</h2>
+            <p className="mt-1 text-sm text-muted">
+              {sellerOrders.length} order{sellerOrders.length === 1 ? "" : "s"} — update status and
+              view buyer delivery details.
+            </p>
+            <ul className="mt-4 space-y-4">
+              {sellerOrders.map((sellerOrder) => (
+                <li key={sellerOrder.order.id}>
+                  <SellerOrderCard
+                    sellerOrder={sellerOrder}
+                    shippingAddress={
+                      shippingByListingId.get(sellerOrder.order.listing_id) ?? null
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {!error && listings.length > 0 ? (
           <>
-            <div className="mt-8 space-y-4 lg:hidden">
+            <div className={`space-y-4 lg:hidden ${soldListings.length > 0 ? "mt-10" : "mt-8"}`}>
               {listings.map((listing) => {
+                const saleStatus = getSellerListingSaleStatus(listing);
+                const winnerLabel =
+                  saleStatus === "sold" ? getWinnerLabel(listing, winnerProfileById) : null;
+                const buyerAddress =
+                  saleStatus === "sold"
+                    ? (shippingByListingId.get(listing.id) ?? null)
+                    : null;
+                const listingOrder =
+                  saleStatus === "sold" ? (ordersByListingId.get(listing.id) ?? null) : null;
                 const coverUrl = getCoverImageUrl(listing.image_url, listing.listing_images);
                 const imageUrls = getGalleryImageUrls(listing.image_url, listing.listing_images);
 
@@ -163,28 +254,53 @@ export default async function MyListingsPage() {
                           {listing.title}
                         </h2>
                         <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                          Current bid
+                          {priceLabel(saleStatus)}
                         </p>
-                        <p className="mt-0.5 text-lg font-semibold tabular-nums text-ink">
+                        <p
+                          className={`mt-0.5 text-lg font-semibold tabular-nums ${
+                            saleStatus === "sold" ? "text-accent" : "text-ink"
+                          }`}
+                        >
                           {formatListingPrice(getDisplayPrice(listing))}
                         </p>
+                        {winnerLabel ? (
+                          <p className="mt-1 text-xs text-muted">
+                            Buyer: <span className="font-medium text-ink">{winnerLabel}</span>
+                          </p>
+                        ) : null}
                         <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted">
                           <div>
                             <dt className="font-medium text-muted">Bids</dt>
                             <dd>{getBidCount(listing)}</dd>
                           </div>
                           <div>
-                            <dt className="font-medium text-muted">Ends</dt>
+                            <dt className="font-medium text-muted">
+                              {saleStatus === "live" ? "Ends" : "Ended"}
+                            </dt>
                             <dd>{formatDate(listing.auction_end)}</dd>
                           </div>
                         </dl>
-                        <span
-                          className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-medium ${statusClass(listing.status)}`}
-                        >
-                          {listing.status}
-                        </span>
+                        <div className="mt-3">
+                          <SellerListingSaleBadge status={saleStatus} size="sm" />
+                        </div>
                       </div>
                     </div>
+                    {saleStatus === "sold" ? (
+                      <div className="space-y-0 border-t border-border px-4 pb-4">
+                        {listingOrder ? (
+                          <SellerOrderStatusSelect
+                            orderId={listingOrder.id}
+                            currentStatus={listingOrder.status}
+                            compact
+                          />
+                        ) : null}
+                        <SellerBuyerShippingPanel
+                          address={buyerAddress}
+                          buyerLabel={winnerLabel}
+                          compact
+                        />
+                      </div>
+                    ) : null}
                     <div className="border-t border-border px-4 py-3">
                       <MyListingActions
                         listingId={listing.id}
@@ -197,14 +313,20 @@ export default async function MyListingsPage() {
               })}
             </div>
 
-            <div className="mt-8 hidden overflow-hidden rounded-3xl border border-border bg-surface lg:block">
+            <div
+              className={`hidden overflow-hidden rounded-3xl border border-border bg-surface lg:block ${
+                soldListings.length > 0 ? "mt-10" : "mt-8"
+              }`}
+            >
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-border bg-page-dark text-xs font-medium uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-5 py-4">Listing</th>
-                      <th className="px-5 py-4">Current bid</th>
+                      <th className="px-5 py-4">Price</th>
                       <th className="px-5 py-4">Bids</th>
+                      <th className="px-5 py-4">Buyer</th>
+                      <th className="px-5 py-4">Delivery</th>
                       <th className="px-5 py-4">Auction end</th>
                       <th className="px-5 py-4">Status</th>
                       <th className="px-5 py-4">Actions</th>
@@ -212,6 +334,19 @@ export default async function MyListingsPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {listings.map((listing) => {
+                      const saleStatus = getSellerListingSaleStatus(listing);
+                      const winnerLabel =
+                        saleStatus === "sold"
+                          ? getWinnerLabel(listing, winnerProfileById)
+                          : null;
+                      const buyerAddress =
+                        saleStatus === "sold"
+                          ? (shippingByListingId.get(listing.id) ?? null)
+                          : null;
+                      const listingOrder =
+                        saleStatus === "sold"
+                          ? (ordersByListingId.get(listing.id) ?? null)
+                          : null;
                       const coverUrl = getCoverImageUrl(
                         listing.image_url,
                         listing.listing_images
@@ -222,7 +357,12 @@ export default async function MyListingsPage() {
                       );
 
                       return (
-                        <tr key={listing.id} className="align-middle">
+                        <tr
+                          key={listing.id}
+                          className={`align-middle ${
+                            saleStatus === "sold" ? "bg-accent/5" : ""
+                          }`}
+                        >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-4">
                               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-page-dark">
@@ -242,19 +382,43 @@ export default async function MyListingsPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4 font-semibold tabular-nums text-ink">
+                          <td
+                            className={`px-5 py-4 font-semibold tabular-nums ${
+                              saleStatus === "sold" ? "text-accent" : "text-ink"
+                            }`}
+                          >
+                            <span className="block text-[10px] font-medium uppercase tracking-wide text-muted">
+                              {priceLabel(saleStatus)}
+                            </span>
                             {formatListingPrice(getDisplayPrice(listing))}
                           </td>
                           <td className="px-5 py-4 text-ink/90">{getBidCount(listing)}</td>
                           <td className="px-5 py-4 text-ink/90">
+                            {winnerLabel ?? "—"}
+                          </td>
+                          <td className="px-5 py-4 text-ink/90">
+                            {saleStatus === "sold" ? (
+                              buyerAddress ? (
+                                <span className="text-xs font-medium text-accent">
+                                  Address on file
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted">Awaiting address</span>
+                              )
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-ink/90">
                             {formatDate(listing.auction_end)}
                           </td>
                           <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusClass(listing.status)}`}
-                            >
-                              {listing.status}
-                            </span>
+                            <div className="flex flex-col gap-2">
+                              <SellerListingSaleBadge status={saleStatus} />
+                              {listingOrder ? (
+                                <OrderStatusBadge status={listingOrder.status} size="sm" />
+                              ) : null}
+                            </div>
                           </td>
                           <td className="px-5 py-4">
                             <MyListingActions

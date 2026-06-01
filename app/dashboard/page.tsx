@@ -12,6 +12,11 @@ import {
 } from "@/lib/listing-images";
 import { getWatchlistCount } from "@/lib/favorites";
 import { getUnreadNotificationCount } from "@/lib/notifications";
+import { SellerOrderCard } from "@/components/seller-order-card";
+import { getBuyerOrders, getSellerOrders } from "@/lib/orders";
+import { getShippingAddressesByListingIds } from "@/lib/shipping-addresses";
+import { isUserAdmin } from "@/lib/admin";
+import { expirePastDueListings } from "@/lib/expire-listings";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +43,10 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const isAdmin = await isUserAdmin(supabase, user.id);
+
+  await expirePastDueListings(supabase);
+
   const { data: listingsData } = await supabase
     .from("listings")
     .select(
@@ -50,6 +59,15 @@ export default async function DashboardPage() {
   const myListings = (listingsData ?? []) as MyListing[];
   const watchlistCount = await getWatchlistCount(supabase, user.id);
   const unreadNotificationCount = await getUnreadNotificationCount(supabase, user.id);
+  const [wonOrders, sellerOrders] = await Promise.all([
+    getBuyerOrders(supabase, user.id),
+    getSellerOrders(supabase, user.id),
+  ]);
+  const recentSellerOrders = sellerOrders.slice(0, 3);
+  const shippingByListingId = await getShippingAddressesByListingIds(
+    supabase,
+    recentSellerOrders.map((item) => item.order.listing_id)
+  );
 
   return (
     <main className="min-h-screen bg-page text-ink">
@@ -57,6 +75,12 @@ export default async function DashboardPage() {
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
           <GobidMeLogo />
           <div className="flex items-center gap-2">
+            <Link
+              href="/orders"
+              className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
+            >
+              Orders
+            </Link>
             <Link
               href="/my-listings"
               className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
@@ -88,6 +112,14 @@ export default async function DashboardPage() {
             >
               Browse
             </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className="hidden rounded-full border border-accent/40 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20 sm:inline-flex"
+              >
+                Admin
+              </Link>
+            ) : null}
             <LogoutButton />
           </div>
         </nav>
@@ -110,7 +142,25 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-3">
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Link
+            href="/orders"
+            className="rounded-3xl border border-border bg-surface p-5 transition hover:border-accent/40 hover:shadow-sm"
+          >
+            <p className="text-sm text-muted">Won auctions</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-accent">
+              {wonOrders.length}
+            </p>
+          </Link>
+          <Link
+            href="/my-listings"
+            className="rounded-3xl border border-border bg-surface p-5 transition hover:border-accent/40 hover:shadow-sm"
+          >
+            <p className="text-sm text-muted">Sold orders</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-ink">
+              {sellerOrders.length}
+            </p>
+          </Link>
           <article className="rounded-3xl border border-border bg-surface p-5">
             <p className="text-sm text-muted">Active bids</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">12</p>
@@ -130,6 +180,36 @@ export default async function DashboardPage() {
             <p className="mt-3 text-3xl font-semibold tracking-tight">{unreadNotificationCount}</p>
           </Link>
         </section>
+
+        {recentSellerOrders.length > 0 ? (
+          <section className="mt-10">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Recent sales</h2>
+                <p className="mt-1 text-sm text-muted">Manage order status and buyer shipping.</p>
+              </div>
+              <Link
+                href="/my-listings"
+                className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+              >
+                View all sales
+              </Link>
+            </div>
+            <ul className="space-y-4">
+              {recentSellerOrders.map((sellerOrder) => (
+                <li key={sellerOrder.order.id}>
+                  <SellerOrderCard
+                    sellerOrder={sellerOrder}
+                    shippingAddress={
+                      shippingByListingId.get(sellerOrder.order.listing_id) ?? null
+                    }
+                    compact
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="mt-10">
           <div className="mb-4 flex items-end justify-between gap-4">

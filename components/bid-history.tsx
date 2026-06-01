@@ -3,6 +3,7 @@ import {
   formatBidPlacedAt,
   formatBidTimestamp,
   getAuctionWinner,
+  getWinningBid,
   type BidHistoryEntry,
 } from "@/lib/bids";
 import type { ListingReserveStatus } from "@/lib/reserve-price";
@@ -11,16 +12,18 @@ type BidHistoryProps = {
   bids: BidHistoryEntry[];
   isEnded?: boolean;
   reserveStatus?: ListingReserveStatus;
+  highlightBidId?: string | null;
 };
 
 export function BidHistory({
   bids,
   isEnded = false,
   reserveStatus = "no_reserve",
+  highlightBidId = null,
 }: BidHistoryProps) {
   const winningBid = getAuctionWinner(bids, reserveStatus, isEnded);
+  const leadingBid = getWinningBid(bids);
   const winningBidId = winningBid?.id ?? null;
-  const reserveBlocked = isEnded && reserveStatus === "reserve_not_met";
 
   return (
     <div className="mt-6 border-t border-border pt-6">
@@ -33,51 +36,24 @@ export function BidHistory({
         ) : null}
       </div>
 
-      {isEnded ? (
-        <div className="mt-4">
-          {reserveBlocked ? (
-            <div className="rounded-2xl border border-amber-500/35 bg-amber-950/40 px-4 py-4 text-center sm:px-5">
-              <p className="text-sm font-semibold text-amber-200">
-                Reserve not met — no winner
-              </p>
-              <p className="mt-1 text-xs text-amber-200/80">
-                The highest bid did not meet the seller&apos;s reserve.
-              </p>
-            </div>
-          ) : winningBid ? (
-            <div className="rounded-2xl border border-accent/40 bg-accent/10 p-4 sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                Winning bid
-              </p>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Winner
-                  </p>
-                  <p className="mt-0.5 truncate text-lg font-semibold text-ink">
-                    {winningBid.bidderLabel}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    Placed {formatBidPlacedAt(winningBid.created_at)}
-                  </p>
-                </div>
-                <p className="text-2xl font-semibold tabular-nums text-accent sm:text-right">
-                  {formatBidAmount(winningBid.amount)}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="rounded-2xl border border-border bg-page px-4 py-4 text-center text-sm text-muted">
-              No bids placed
-            </p>
-          )}
-        </div>
-      ) : null}
-
       {bids.length === 0 && !isEnded ? (
         <p className="mt-4 rounded-2xl border border-border bg-page px-4 py-3 text-sm text-muted">
           No bids yet. Be the first to place a bid.
         </p>
+      ) : null}
+
+      {!isEnded && leadingBid ? (
+        <div className="mt-4 rounded-2xl border border-accent/35 bg-accent/10 px-4 py-3 sm:px-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+            Highest bid
+          </p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
+            <p className="truncate text-sm font-semibold text-ink">{leadingBid.bidderLabel}</p>
+            <p className="text-lg font-semibold tabular-nums text-accent">
+              {formatBidAmount(leadingBid.amount)}
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {bids.length > 0 ? (
@@ -89,16 +65,19 @@ export function BidHistory({
           {bids.map((bid, index) => {
             const isLatest = index === 0;
             const isWinner = winningBidId === bid.id;
+            const isFlashing = highlightBidId === bid.id;
 
             return (
               <li
                 key={bid.id}
-                className={`rounded-2xl border px-4 py-3 ${
-                  isWinner
-                    ? "border-accent/40 bg-accent/10"
-                    : isLatest && !isEnded
-                      ? "border-accent/35 bg-accent/5"
-                      : "border-border bg-page"
+                className={`rounded-2xl border px-4 py-3 transition-colors ${
+                  isFlashing
+                    ? "bid-row-flash border-accent/50 bg-accent/10"
+                    : isWinner
+                      ? "border-accent/40 bg-accent/10"
+                      : isLatest && !isEnded
+                        ? "border-accent/35 bg-accent/5"
+                        : "border-border bg-page"
                 }`}
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

@@ -51,6 +51,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
     )
     .eq("seller_id", id)
     .eq("status", "active")
+    .eq("is_hidden", false)
     .gt("auction_end", new Date().toISOString())
     .order("created_at", { ascending: false });
 

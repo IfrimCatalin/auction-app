@@ -5,7 +5,8 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { AuctionCountdown } from "@/components/auction-countdown";
 import { ListingCover } from "@/components/listing-cover";
 import { getCoverImageUrl, type ListingImageRow } from "@/lib/listing-images";
-import { formatListingPrice } from "@/lib/listing-price";
+import { LivePrice } from "@/components/live-price";
+import { isListingAuctionClosed } from "@/lib/expire-listings";
 import {
   ListingVisibilityBadge,
   resolveListingVisibility,
@@ -23,6 +24,8 @@ export type AuctionListingCardData = {
   current_price: number;
   created_at?: string;
   auction_end?: string;
+  status?: string;
+  reserve_price?: number | null;
   visibility?: ListingVisibility;
   reserveStatus?: ListingReserveStatus;
   image_url: string | null;
@@ -48,15 +51,20 @@ export function AuctionListingCard({
   const isOwner = Boolean(userId && listing.seller_id === userId);
   const visibility = resolveListingVisibility(listing);
   const auctionEnd = listing.auction_end ?? "";
-  const { isEndingSoon, isEnded } = useAuctionCountdown(auctionEnd);
+  const listingStatus = listing.status ?? "active";
+  const { isEndingSoon, isEnded: countdownEnded } = useAuctionCountdown(auctionEnd);
+  const isClosed =
+    countdownEnded || isListingAuctionClosed(listingStatus, auctionEnd) || listingStatus === "ended";
 
   return (
     <Link
       href={`/auctions/${listing.id}`}
       className={`group overflow-hidden rounded-3xl border bg-surface transition hover:shadow-md ${
-        isEndingSoon && !isEnded
-          ? "border-accent/50 ring-2 ring-accent/30"
-          : "border-border"
+        isClosed
+          ? "border-border opacity-90"
+          : isEndingSoon
+            ? "border-accent/50 ring-2 ring-accent/30"
+            : "border-border"
       }`}
     >
       <div className="relative aspect-square w-full overflow-hidden bg-page-dark">
@@ -95,12 +103,16 @@ export function AuctionListingCard({
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
               Current bid
             </p>
-            <p className="text-lg font-semibold tabular-nums text-ink">
-              {formatListingPrice(listing.current_price)}
-            </p>
+            <LivePrice value={listing.current_price} size="sm" />
           </div>
           {showTimeLeft && auctionEnd ? (
-            <AuctionCountdown auctionEnd={auctionEnd} size="sm" />
+            isClosed ? (
+              <span className="rounded-full border border-border bg-page px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                Ended
+              </span>
+            ) : (
+              <AuctionCountdown auctionEnd={auctionEnd} size="sm" />
+            )
           ) : null}
         </div>
       </div>

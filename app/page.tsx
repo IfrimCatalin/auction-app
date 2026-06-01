@@ -52,6 +52,7 @@ export default async function Home() {
       `id, seller_id, title, category, current_price, created_at, auction_end, reserve_price, image_url, listing_images (${LISTING_IMAGES_SELECT})`
     )
     .eq("status", "active")
+    .eq("is_hidden", false)
     .gt("auction_end", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(6);

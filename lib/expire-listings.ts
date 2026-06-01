@@ -1,11 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** True when bidding should be closed (status or auction end time). */
+/** True when bidding should be closed (status, moderation, or auction end time). */
 export function isListingAuctionClosed(
   status: string,
   auctionEndIso?: string,
-  now: number = Date.now()
+  now: number = Date.now(),
+  isHidden?: boolean | null
 ): boolean {
+  if (isHidden) {
+    return true;
+  }
+
   if (status === "ended" || status === "cancelled") {
     return true;
   }
@@ -29,5 +34,14 @@ export async function expirePastDueListings(supabase: SupabaseClient): Promise<v
 
   if (error) {
     console.error("[expirePastDueListings]", error.message);
+  }
+}
+
+/** Creates orders for ended auctions with a valid winning bidder. */
+export async function syncAuctionOrders(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.rpc("sync_auction_orders");
+
+  if (error) {
+    console.error("[syncAuctionOrders]", error.message);
   }
 }

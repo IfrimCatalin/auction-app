@@ -65,3 +65,34 @@ option {
   background-color: var(--gobid-elevated);
   color: var(--gobid-ink);
 }
+
+@keyframes live-price-glow {
+  0% {
+    text-shadow: 0 0 0 color-mix(in srgb, var(--gobid-accent) 0%, transparent);
+  }
+  40% {
+    text-shadow: 0 0 16px color-mix(in srgb, var(--gobid-accent) 45%, transparent);
+  }
+  100% {
+    text-shadow: 0 0 0 color-mix(in srgb, var(--gobid-accent) 0%, transparent);
+  }
+}
+
+.live-price-pulse {
+  animation: live-price-glow 0.7s ease-out;
+}
+
+@keyframes bid-row-flash {
+  0% {
+    border-color: color-mix(in srgb, var(--gobid-accent) 70%, transparent);
+    background-color: color-mix(in srgb, var(--gobid-accent) 18%, transparent);
+  }
+  100% {
+    border-color: var(--gobid-border);
+    background-color: var(--gobid-page);
+  }
+}
+
+.bid-row-flash {
+  animation: bid-row-flash 1.2s ease-out;
+}
