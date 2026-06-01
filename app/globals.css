@@ -1,14 +1,20 @@
 @import "tailwindcss";
 
+@source "../app/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../components/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../lib/**/*.{js,ts,jsx,tsx}";
+
 :root {
   --gobid-page: #000000;
-  --gobid-page-dark: #121212;
-  --gobid-surface: #1a1a1a;
-  --gobid-elevated: #222222;
+  --gobid-page-dark: #0a0a0a;
+  --gobid-surface: #141414;
+  --gobid-elevated: #1c1c1c;
   --gobid-accent: #d4af37;
+  --gobid-accent-bright: #f0d060;
+  --gobid-accent-dim: #9a7b28;
   --gobid-ink: #f8faf5;
   --gobid-muted: #a1a1aa;
-  --gobid-border: #2a2a2a;
+  --gobid-border: #2e2e2e;
 }
 
 @theme inline {
@@ -17,6 +23,8 @@
   --color-surface: var(--gobid-surface);
   --color-elevated: var(--gobid-elevated);
   --color-accent: var(--gobid-accent);
+  --color-accent-bright: var(--gobid-accent-bright);
+  --color-accent-dim: var(--gobid-accent-dim);
   --color-ink: var(--gobid-ink);
   --color-muted: var(--gobid-muted);
   --color-border: var(--gobid-border);
@@ -37,8 +45,16 @@
   }
 
   ::selection {
-    background-color: color-mix(in srgb, var(--gobid-accent) 40%, transparent);
+    background-color: color-mix(in srgb, var(--gobid-accent) 45%, transparent);
     color: var(--gobid-ink);
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
   }
 }
 
@@ -66,12 +82,19 @@ option {
   color: var(--gobid-ink);
 }
 
+/* Premium marketing hero glow — visible on home */
+.gobid-hero-glow {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 0%, color-mix(in srgb, var(--gobid-accent) 22%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 10%, color-mix(in srgb, var(--gobid-accent) 12%, transparent), transparent 50%);
+}
+
 @keyframes live-price-glow {
   0% {
     text-shadow: 0 0 0 color-mix(in srgb, var(--gobid-accent) 0%, transparent);
   }
   40% {
-    text-shadow: 0 0 16px color-mix(in srgb, var(--gobid-accent) 45%, transparent);
+    text-shadow: 0 0 20px color-mix(in srgb, var(--gobid-accent) 55%, transparent);
   }
   100% {
     text-shadow: 0 0 0 color-mix(in srgb, var(--gobid-accent) 0%, transparent);
@@ -95,4 +118,20 @@ option {
 
 .bid-row-flash {
   animation: bid-row-flash 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .live-price-pulse,
+  .bid-row-flash {
+    animation: none !important;
+  }
 }

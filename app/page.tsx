@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
-import { GobidMeLogo } from "@/components/gobidme-logo";
 import Link from "next/link";
+import { PublicNavbar } from "@/components/public-navbar";
+import { SiteFooter } from "@/components/site-footer";
 import { AuctionListingCard } from "@/components/auction-listing-card";
+import { ButtonLink } from "@/components/ui/button-link";
+import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
 import { expirePastDueListings } from "@/lib/expire-listings";
 import { getListingReserveStatus, type ListingReserveStatus } from "@/lib/reserve-price";
+import { container, pageShell } from "@/lib/ui-tokens";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -64,89 +69,60 @@ export default async function Home() {
   const favoritedIds = user ? await getFavoritedListingIds(supabase, user.id) : new Set<string>();
 
   return (
-    <main className="min-h-screen bg-page text-ink">
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <GobidMeLogo priority />
-          <ul className="hidden items-center gap-7 text-sm text-muted md:flex">
-            <li>
-              <Link href="/auctions" className="transition hover:text-ink">
-                Auctions
-              </Link>
-            </li>
-            <li>
-              <Link href="/auctions" className="transition hover:text-ink">
-                Categories
-              </Link>
-            </li>
-            <li>
-              <Link href="/create-listing" className="transition hover:text-ink">
-                Sell
-              </Link>
-            </li>
-          </ul>
-          <Link
-            href={isAuthenticated ? "/dashboard" : "/login"}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
-          >
-            {isAuthenticated ? "Dashboard" : "Sign in"}
-          </Link>
-        </nav>
-      </header>
+    <div className={`${pageShell} flex min-h-screen flex-col`}>
+      <PublicNavbar isAuthenticated={isAuthenticated} />
 
-      <section className="mx-auto max-w-6xl px-5 pb-16 pt-12 md:pt-20 lg:px-8 lg:pt-24">
+      {/* Hero — gold glow is obvious vs flat black */}
+      <section className={`${container} gobid-hero-glow pb-12 pt-10 sm:pb-16 sm:pt-14 lg:pt-20`}>
         <div className="max-w-3xl">
-          <p className="text-sm font-medium text-muted">A community for collectors</p>
-          <h1 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl lg:text-7xl">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-accent">
+            Premium auctions
+          </p>
+          <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl lg:text-7xl">
             Rare finds.
             <br />
-            <span className="text-accent">Honest bids.</span>
+            <span className="bg-gradient-to-r from-accent-bright via-accent to-accent-dim bg-clip-text text-transparent">
+              Honest bids.
+            </span>
           </h1>
-          <p className="mt-6 max-w-xl text-base text-muted sm:text-lg">
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-muted sm:text-lg">
             GoBidMe is the calm, image-first marketplace for trusted sellers and serious buyers.
             Discover beautiful objects and place a bid in seconds.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={isAuthenticated ? "/auctions" : "/signup"}
-              className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-black transition hover:bg-accent/90"
-            >
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <ButtonLink href={isAuthenticated ? "/auctions" : "/signup"} size="lg">
               Start bidding
-            </Link>
-            <Link
-              href="/auctions"
-              className="rounded-full border border-border bg-surface px-6 py-3 text-sm font-medium text-ink transition hover:bg-page-dark"
-            >
+            </ButtonLink>
+            <ButtonLink href="/auctions" variant="secondary" size="lg">
               Browse auctions
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 pb-16 lg:px-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Featured listings</h2>
-            <p className="mt-1 text-sm text-muted">Fresh items from sellers this week.</p>
-          </div>
-          <Link
-            href="/auctions"
-            className="hidden text-sm font-medium text-ink underline-offset-4 hover:underline sm:inline"
-          >
-            See all
-          </Link>
-        </div>
+      <section className={`${container} pb-16`}>
+        <SectionTitle
+          title="Featured listings"
+          description="Fresh items from sellers this week."
+          action={
+            <ButtonLink href="/auctions" variant="secondary" size="sm">
+              See all →
+            </ButtonLink>
+          }
+        />
 
         {featured.length === 0 ? (
-          <div className="rounded-3xl border border-border bg-surface p-10 text-center text-sm text-muted">
-            No live listings yet. Be the first to{" "}
-            <Link href="/create-listing" className="font-medium text-ink underline">
-              create one
-            </Link>
-            .
-          </div>
+          <Card padding="lg" className="text-center">
+            <p className="text-base font-semibold text-ink">No live listings yet</p>
+            <p className="mt-2 text-sm text-muted">
+              Be the first to list an item on GoBidMe.
+            </p>
+            <ButtonLink href="/create-listing" className="mt-6">
+              Create a listing
+            </ButtonLink>
+          </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((item) => (
               <AuctionListingCard
                 key={item.id}
@@ -161,42 +137,30 @@ export default async function Home() {
         )}
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 pb-20 lg:px-8">
-        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Browse by category</h2>
-        <p className="mt-1 text-sm text-muted">Curated by the GoBidMe community.</p>
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <section className={`${container} pb-20`}>
+        <SectionTitle
+          title="Browse by category"
+          description="Curated by the GoBidMe community."
+        />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {categories.map((category) => (
             <Link
               key={category.name}
               href="/auctions"
-              className="flex flex-col items-start gap-2 rounded-2xl border border-border bg-surface p-4 transition hover:border-accent/40 hover:shadow-sm"
+              className="group flex flex-col items-start gap-3 rounded-2xl border-2 border-border bg-surface p-5 ring-1 ring-white/5 transition-all duration-300 hover:-translate-y-1 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/15 sm:rounded-3xl sm:p-6"
             >
-              <span className="text-2xl" aria-hidden>
+              <span className="text-3xl transition-transform group-hover:scale-110" aria-hidden>
                 {category.emoji}
               </span>
-              <span className="text-sm font-medium text-ink">{category.name}</span>
+              <span className="text-sm font-semibold text-ink group-hover:text-accent">
+                {category.name}
+              </span>
             </Link>
           ))}
         </div>
       </section>
 
-      <footer className="border-t border-border bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center lg:px-8">
-          <GobidMeLogo className="md:h-16" />
-          <p>© {new Date().getFullYear()} GoBidMe</p>
-          <div className="flex items-center gap-5">
-            <a href="#" className="transition hover:text-ink">
-              Terms
-            </a>
-            <a href="#" className="transition hover:text-ink">
-              Privacy
-            </a>
-            <a href="#" className="transition hover:text-ink">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
-    </main>
+      <SiteFooter />
+    </div>
   );
 }

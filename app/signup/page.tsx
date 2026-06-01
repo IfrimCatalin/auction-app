@@ -1,8 +1,12 @@
 "use client";
-import { GobidMeLogo } from "@/components/gobidme-logo";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { AuthFooterLink, AuthFormShell } from "@/components/auth-form-shell";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
+import { errorBox, successBox } from "@/lib/ui-tokens";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -37,73 +41,50 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-page px-5 py-12 text-ink">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <GobidMeLogo variant="auth" className="mx-auto" />
-        </div>
-
-        <div className="rounded-3xl border border-border bg-surface p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-          <p className="mt-2 text-sm text-muted">
-            Join GoBidMe to bid on rare items and list your own.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-7 space-y-4">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-ink/90">Email</span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-page-dark px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent"
-                placeholder="you@example.com"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-ink/90">Password</span>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-page-dark px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent"
-                placeholder="At least 6 characters"
-              />
-            </label>
-
-            {errorMessage ? (
-              <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
-                {errorMessage}
-              </p>
-            ) : null}
-
-            {successMessage ? (
-              <p className="rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
-                {successMessage}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
-          </form>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          Already have an account?{" "}
-          <Link href="/login" className="font-medium text-ink underline-offset-4 hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+    <AuthFormShell
+      title="Create your account"
+      description="Join GoBidMe to bid on rare items and list your own."
+      footer={
+        <>
+          Already have an account? <AuthFooterLink href="/login">Sign in</AuthFooterLink>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Email" htmlFor="signup-email" required>
+          <Input
+            id="signup-email"
+            type="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+        </Field>
+        <Field
+          label="Password"
+          htmlFor="signup-password"
+          required
+          helper="At least 6 characters"
+        >
+          <Input
+            id="signup-password"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Create a password"
+            autoComplete="new-password"
+          />
+        </Field>
+        {errorMessage ? <p className={cn(errorBox)} role="alert">{errorMessage}</p> : null}
+        {successMessage ? <p className={cn(successBox)} role="status">{successMessage}</p> : null}
+        <Button type="submit" fullWidth loading={loading} size="lg">
+          Create account
+        </Button>
+      </form>
+    </AuthFormShell>
   );
 }

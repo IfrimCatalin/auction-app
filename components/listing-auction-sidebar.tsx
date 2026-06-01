@@ -108,7 +108,9 @@ export function ListingAuctionSidebar({
   const showReviewSection = showLeaveReview || showExistingReview;
 
   return (
-    <div className="rounded-3xl border border-border bg-surface p-6">
+    <div className="overflow-hidden rounded-2xl border-2 border-accent/25 bg-surface shadow-2xl shadow-accent/10 ring-1 ring-accent/20 sm:rounded-3xl">
+      <div className="h-1.5 bg-gradient-to-r from-accent-dim via-accent to-accent-bright" />
+      <div className="p-5 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Current bid</p>
@@ -253,6 +255,7 @@ export function ListingAuctionSidebar({
           ) : null}
         </div>
       </Link>
+      </div>
     </div>
   );
 }

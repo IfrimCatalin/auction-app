@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   sellerMarkPreparingShipmentAction,
   sellerMarkShippedAction,
-} from "@/app/orders/actions";
+} from "@/app/(authenticated)/orders/actions";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { PaymentStatusBadge } from "@/components/payment-status-badge";
 import type { Order } from "@/lib/orders";

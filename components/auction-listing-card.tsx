@@ -15,6 +15,8 @@ import { useAuctionCountdown } from "@/hooks/use-auction-countdown";
 import type { ListingVisibility } from "@/lib/listing-visibility";
 import { ListingReserveBadge } from "@/components/listing-reserve-badge";
 import type { ListingReserveStatus } from "@/lib/reserve-price";
+import { cardHover } from "@/lib/ui-tokens";
+import { cn } from "@/lib/cn";
 
 export type AuctionListingCardData = {
   id: string;
@@ -59,32 +61,32 @@ export function AuctionListingCard({
   return (
     <Link
       href={`/auctions/${listing.id}`}
-      className={`group overflow-hidden rounded-3xl border bg-surface transition hover:shadow-md ${
-        isClosed
-          ? "border-border opacity-90"
-          : isEndingSoon
-            ? "border-accent/50 ring-2 ring-accent/30"
-            : "border-border"
-      }`}
+      className={cn(
+        "group block overflow-hidden",
+        cardHover,
+        isClosed && "opacity-85",
+        isEndingSoon && !isClosed && "border-accent ring-2 ring-accent/40"
+      )}
     >
-      <div className="relative aspect-square w-full overflow-hidden bg-page-dark">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-page-dark sm:aspect-[5/6]">
+        <div className="absolute inset-x-0 top-0 z-[1] h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-80" />
         <ListingCover
           src={coverUrl}
           alt={listing.title}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute left-3 top-3 flex max-w-[calc(100%-3.5rem)] flex-wrap gap-1.5">
-          <span className="rounded-full bg-surface/90 px-3 py-1 text-[11px] font-medium text-ink/90 backdrop-blur">
-            {listing.category}
-          </span>
-          <ListingVisibilityBadge visibility={visibility} size="sm" />
-          <ListingReserveBadge
-            status={listing.reserveStatus ?? "no_reserve"}
-            size="sm"
-          />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-90" />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded-full border border-accent/30 bg-black/60 px-3 py-1 text-[11px] font-semibold text-accent backdrop-blur">
+              {listing.category}
+            </span>
+            <ListingVisibilityBadge visibility={visibility} size="sm" />
+            <ListingReserveBadge status={listing.reserveStatus ?? "no_reserve"} size="sm" />
+          </div>
         </div>
         {!isOwner ? (
-          <div className="absolute right-3 top-3 z-10">
+          <div className="absolute right-3 top-4 z-10">
             <FavoriteButton
               listingId={listing.id}
               initialFavorited={favorited}
@@ -96,18 +98,20 @@ export function AuctionListingCard({
           </div>
         ) : null}
       </div>
-      <div className="p-4">
-        <h2 className="line-clamp-1 text-base font-medium text-ink">{listing.title}</h2>
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+      <div className="border-t border-border/80 bg-elevated/50 p-5 sm:p-6">
+        <h2 className="line-clamp-2 text-lg font-bold leading-snug text-ink group-hover:text-accent">
+          {listing.title}
+        </h2>
+        <div className="mt-4 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent/80">
               Current bid
             </p>
             <LivePrice value={listing.current_price} size="sm" />
           </div>
           {showTimeLeft && auctionEnd ? (
             isClosed ? (
-              <span className="rounded-full border border-border bg-page px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <span className="rounded-full border border-border bg-page px-3 py-1.5 text-[10px] font-bold uppercase text-muted">
                 Ended
               </span>
             ) : (

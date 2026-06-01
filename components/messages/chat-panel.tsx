@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef } from "react";
-import { markConversationReadAction } from "@/app/messages/actions";
+import { markConversationReadAction } from "@/app/(authenticated)/messages/actions";
 import { MessageComposer } from "@/components/messages/message-composer";
 import { ProfileAvatar } from "@/components/profile-avatar";
 import { useConversationMessages } from "@/hooks/use-conversation-messages";
@@ -86,13 +86,13 @@ export function ChatPanel({
             return (
               <div
                 key={message.id}
-                className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                className={`flex motion-safe:transition-opacity ${isOwn ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 sm:max-w-[70%] ${
+                  className={`max-w-[min(85%,20rem)] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[70%] ${
                     isOwn
-                      ? "rounded-br-md bg-accent text-black"
-                      : "rounded-bl-md border border-border bg-surface text-ink"
+                      ? "rounded-br-sm bg-accent text-black shadow-accent/10"
+                      : "rounded-bl-sm border border-border bg-surface text-ink"
                   }`}
                 >
                   <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">

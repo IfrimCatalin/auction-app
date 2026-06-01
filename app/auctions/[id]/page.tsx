@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { GobidMeLogo } from "@/components/gobidme-logo";
-import Link from "next/link";
+import { AppNavbar } from "@/components/app-navbar";
+import { PublicNavbar } from "@/components/public-navbar";
+import { Card } from "@/components/ui/card";
+import { buildAppNavItems } from "@/lib/app-nav";
+import { container, pageShell } from "@/lib/ui-tokens";
 import { notFound } from "next/navigation";
 import { getListingBidHistory } from "@/lib/bids";
 import { ListingAuctionSidebar } from "@/components/listing-auction-sidebar";
@@ -142,31 +145,25 @@ export default async function AuctionDetailsPage({
       : null;
 
   return (
-    <main className="min-h-screen bg-page text-ink">
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <GobidMeLogo />
-          <Link
-            href="/auctions"
-            className="text-sm font-medium text-muted transition hover:text-ink"
-          >
-            ← All auctions
-          </Link>
-        </nav>
-      </header>
+    <div className={pageShell}>
+      {user ? (
+        <AppNavbar isAuthenticated items={buildAppNavItems()} />
+      ) : (
+        <PublicNavbar isAuthenticated={false} />
+      )}
 
-      <section className="mx-auto max-w-6xl px-5 py-10 lg:px-8 lg:py-14">
-        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-          <div className="space-y-4">
+      <main className={`${container} py-8 sm:py-10 lg:py-12`}>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,1fr)] lg:items-start lg:gap-10">
+          <div className="space-y-6">
             <ListingImageGallery images={galleryUrls} title={listing.title} />
 
-            <div className="rounded-3xl border border-border bg-surface p-6">
+            <Card padding="lg" hover={false}>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs uppercase tracking-wide text-muted">{listing.category}</p>
                 <ListingVisibilityBadge visibility={visibility} size="md" />
                 <ListingReserveBadge status={reserveStatus} size="md" />
               </div>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
                 {listing.title}
               </h1>
               <div className="mt-4">
@@ -190,7 +187,7 @@ export default async function AuctionDetailsPage({
               </p>
 
               <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-page p-4">
+                <div className="rounded-2xl border-2 border-border bg-page-dark p-4 ring-1 ring-white/5">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Starting price
                   </dt>
@@ -198,7 +195,7 @@ export default async function AuctionDetailsPage({
                     {formatPrice(listing.starting_price)}
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-border bg-page p-4">
+                <div className="rounded-2xl border-2 border-border bg-page-dark p-4 ring-1 ring-white/5">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Auction end
                   </dt>
@@ -206,7 +203,7 @@ export default async function AuctionDetailsPage({
                     {formatDate(listing.auction_end)}
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-border bg-page p-4">
+                <div className="rounded-2xl border-2 border-border bg-page-dark p-4 ring-1 ring-white/5">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Status
                   </dt>
@@ -224,7 +221,7 @@ export default async function AuctionDetailsPage({
                     </span>
                   </dd>
                 </div>
-                <div className="rounded-2xl border border-border bg-page p-4">
+                <div className="rounded-2xl border-2 border-border bg-page-dark p-4 ring-1 ring-white/5">
                   <dt className="text-xs font-medium uppercase tracking-wide text-muted">
                     Listed
                   </dt>
@@ -233,10 +230,10 @@ export default async function AuctionDetailsPage({
                   </dd>
                 </div>
               </dl>
-            </div>
+            </Card>
           </div>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
+          <aside className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:self-start">
             <ListingAuctionSidebar
               listingId={listing.id}
               listingTitle={listing.title}
@@ -260,7 +257,7 @@ export default async function AuctionDetailsPage({
             />
           </aside>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

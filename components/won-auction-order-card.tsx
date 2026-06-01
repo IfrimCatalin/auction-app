@@ -75,7 +75,7 @@ export function WonAuctionOrderCard({ order, userId, sellerProfile }: WonAuction
 
   return (
 
-    <article className="overflow-hidden rounded-3xl border border-border bg-surface transition hover:border-accent/30">
+    <article className="overflow-hidden rounded-2xl border-2 border-border bg-surface shadow-md ring-1 ring-white/5 transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-xl hover:shadow-accent/15 sm:rounded-3xl">
 
       <div className="flex flex-col sm:flex-row">
 

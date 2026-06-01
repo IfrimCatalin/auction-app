@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { buyerConfirmDeliveryAction } from "@/app/orders/actions";
+import { buyerConfirmDeliveryAction } from "@/app/(authenticated)/orders/actions";
 import type { OrderStatus } from "@/lib/orders";
 import {
   canBuyerConfirmDelivery,

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { adminSetListingReportStatusAction } from "@/app/admin/actions";
+import { adminSetListingReportStatusAction } from "@/app/(authenticated)/admin/actions";
 import type { ListingReportStatus } from "@/lib/listing-reports";
 
 type AdminReportActionsProps = {

@@ -1,6 +1,17 @@
 import Link from "next/link";
-import { GobidMeLogo } from "@/components/gobidme-logo";
+import { AppNavbar } from "@/components/app-navbar";
+import { PublicNavbar } from "@/components/public-navbar";
 import { AuctionsLiveGrid } from "@/components/auctions-live-grid";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button-link";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { buildAppNavItems } from "@/lib/app-nav";
+import { buttonClasses } from "@/lib/button-variants";
+import { container, pageShell } from "@/lib/ui-tokens";
 import { getFavoritedListingIds, isListingFavorited } from "@/lib/favorites";
 import { LISTING_CATEGORY_OPTIONS } from "@/lib/listing-form";
 import { LISTING_IMAGES_SELECT, type ListingImageRow } from "@/lib/listing-images";
@@ -109,138 +120,81 @@ export default async function AuctionsPage({ searchParams }: AuctionsPageProps) 
     Boolean(rawSearch) || selectedCategory !== "all" || selectedStatus !== "active";
 
   return (
-    <main className="min-h-screen bg-page text-ink">
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-page/90 backdrop-blur">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 lg:px-8">
-          <GobidMeLogo />
-          <div className="flex items-center gap-2">
-            {user ? (
-              <>
-                <Link
-                  href="/watchlist"
-                  className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
-                >
-                  Watchlist
-                </Link>
-                <Link
-                  href="/notifications"
-                  className="hidden rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-ink transition hover:bg-page-dark sm:inline-flex"
-                >
-                  Notifications
-                </Link>
-              </>
-            ) : null}
-            <Link
-              href="/create-listing"
-              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-black transition hover:bg-accent/90"
-            >
-              Sell an item
+    <main className={pageShell}>
+      {user ? (
+        <AppNavbar
+          isAuthenticated
+          items={buildAppNavItems()}
+          rightSlot={
+            <Link href="/create-listing" className={buttonClasses("primary", "sm")}>
+              Sell
             </Link>
-          </div>
-        </nav>
-      </header>
+          }
+        />
+      ) : (
+        <PublicNavbar isAuthenticated={false} />
+      )}
 
-      <section className="mx-auto max-w-6xl px-5 pb-16 pt-10 lg:px-8 lg:pt-14">
-        <div className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Live auctions</h1>
-            <p className="mt-2 text-sm text-muted">
-              Browse listings from sellers around the community.
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="hidden text-sm font-medium text-muted transition hover:text-ink sm:inline"
-          >
-            ← Home
-          </Link>
-        </div>
+      <section className={`${container} pb-16 pt-8 sm:pt-10 lg:pt-12`}>
+        <PageHeader
+          title="Live auctions"
+          description="Browse listings from sellers around the community."
+          actions={<ButtonLink href="/create-listing">Sell an item</ButtonLink>}
+        />
 
-        <form method="get" className="mb-8 rounded-3xl border border-border bg-surface p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
-                Search
-              </span>
-              <input
-                type="search"
-                name="q"
-                defaultValue={rawSearch}
-                placeholder="Search title or description"
-                className="w-full rounded-2xl border border-border bg-page-dark px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
-                Category
-              </span>
-              <select
-                name="category"
-                defaultValue={selectedCategory}
-                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
-              >
-                <option value="all">All categories</option>
-                {LISTING_CATEGORY_OPTIONS.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
-                Status
-              </span>
-              <select
-                name="status"
-                defaultValue={selectedStatus}
-                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
-              >
-                {Object.entries(STATUS_OPTIONS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">
-                Sort
-              </span>
-              <select
-                name="sort"
-                defaultValue={selectedSort}
-                className="w-full rounded-2xl border border-border bg-page-dark px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
-              >
-                {Object.entries(SORT_OPTIONS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
-              <button
-                type="submit"
-                className="w-full rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-black transition hover:bg-accent/90 lg:w-auto"
-              >
-                Apply
-              </button>
-              {hasFilters ? (
-                <Link
-                  href="/auctions"
-                  className="whitespace-nowrap rounded-full border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink/90 transition hover:bg-page-dark"
-                >
-                  Reset
-                </Link>
-              ) : null}
+        <Card hover={false} padding="lg" className="mb-10 mt-8 border-accent/20">
+          <form method="get">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+              <Field label="Search" htmlFor="auction-search">
+                <Input
+                  id="auction-search"
+                  type="search"
+                  name="q"
+                  defaultValue={rawSearch}
+                  placeholder="Search title or description"
+                />
+              </Field>
+              <Field label="Category" htmlFor="auction-category">
+                <Select id="auction-category" name="category" defaultValue={selectedCategory}>
+                  <option value="all">All categories</option>
+                  {LISTING_CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Status" htmlFor="auction-status">
+                <Select id="auction-status" name="status" defaultValue={selectedStatus}>
+                  {Object.entries(STATUS_OPTIONS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Sort" htmlFor="auction-sort">
+                <Select id="auction-sort" name="sort" defaultValue={selectedSort}>
+                  {Object.entries(SORT_OPTIONS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-1">
+                <Button type="submit" size="lg" className="w-full lg:w-auto">
+                  Apply filters
+                </Button>
+                {hasFilters ? (
+                  <ButtonLink href="/auctions" variant="secondary" size="md">
+                    Reset
+                  </ButtonLink>
+                ) : null}
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </Card>
 
         {error ? (
           <div className="rounded-3xl border border-rose-500/30 bg-rose-950/40 px-5 py-4 text-sm text-rose-300">

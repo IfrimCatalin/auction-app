@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import {
   adminCancelListingAction,
   adminSetListingHiddenAction,
-} from "@/app/admin/actions";
+} from "@/app/(authenticated)/admin/actions";
 
 type AdminListingActionsProps = {
   listingId: string;

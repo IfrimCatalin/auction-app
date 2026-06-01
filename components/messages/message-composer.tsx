@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState, useTransition } from "react";
-import { sendMessageAction } from "@/app/messages/actions";
+import { sendMessageAction } from "@/app/(authenticated)/messages/actions";
 import type { MessageRow } from "@/lib/messages";
-import { btnPrimary, inputBase } from "@/lib/ui-theme";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { errorBox } from "@/lib/ui-tokens";
 
 type MessageComposerProps = {
   conversationId: string;
@@ -38,22 +40,22 @@ export function MessageComposer({ conversationId, onMessageSent }: MessageCompos
   return (
     <form
       onSubmit={handleSubmit}
-      className="border-t border-border bg-surface p-3 sm:p-4"
+      className="sticky bottom-0 z-10 shrink-0 border-t border-border bg-surface/95 p-3 backdrop-blur sm:p-4"
     >
       {error ? (
-        <p className="mb-2 text-xs text-red-200" role="alert">
+        <p className={`${errorBox} mb-2 py-2 text-xs`} role="alert">
           {error}
         </p>
       ) : null}
       <div className="flex gap-2">
-        <textarea
+        <Textarea
           value={content}
           onChange={(event) => setContent(event.target.value)}
           rows={1}
           maxLength={4000}
           disabled={pending}
           placeholder="Write a message…"
-          className={`${inputBase} max-h-32 min-h-[44px] flex-1 resize-y py-2.5`}
+          className="max-h-32 min-h-[44px] flex-1 resize-none py-2.5"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
@@ -61,13 +63,15 @@ export function MessageComposer({ conversationId, onMessageSent }: MessageCompos
             }
           }}
         />
-        <button
+        <Button
           type="submit"
           disabled={pending || !content.trim()}
-          className={`${btnPrimary} shrink-0 self-end px-4`}
+          loading={pending}
+          className="shrink-0 self-end"
+          aria-label="Send message"
         >
-          {pending ? "…" : "Send"}
-        </button>
+          Send
+        </Button>
       </div>
     </form>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { openConversationFormAction } from "@/app/messages/actions";
+import { openConversationFormAction } from "@/app/(authenticated)/messages/actions";
 import { btnSecondary } from "@/lib/ui-theme";
 
 type MessageUserButtonProps = {

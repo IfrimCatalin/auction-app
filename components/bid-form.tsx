@@ -10,6 +10,11 @@ import {
   type BidHistoryEntry,
 } from "@/lib/bids";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
+import { errorBox, successBox } from "@/lib/ui-tokens";
 
 export type BidFormProps = {
   listingId: string;
@@ -171,9 +176,13 @@ export function BidForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-      <label className="block">
-        <span className="mb-2 block text-sm font-medium text-ink/90">Your bid (USD)</span>
-        <input
+      <Field
+        label="Your bid (USD)"
+        htmlFor="bid-amount"
+        helper={`Minimum ${bidQuote.minimumBidLabel} · increment ${bidQuote.incrementLabel}`}
+      >
+        <Input
+          id="bid-amount"
           type="number"
           required
           min={bidQuote.minimumBidInput}
@@ -182,48 +191,31 @@ export function BidForm({
           onChange={(e) => handleAmountChange(e.target.value)}
           disabled={formDisabled || loading}
           placeholder={bidQuote.minimumBidLabel}
-          aria-describedby="bid-minimum-help"
-          className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-ink outline-none transition placeholder:text-muted/70 focus:border-accent disabled:cursor-not-allowed disabled:bg-page disabled:text-muted"
+          hasError={isBelowMinimum || message?.type === "error"}
         />
-        <p id="bid-minimum-help" className="mt-2 text-xs leading-relaxed text-muted">
-          Minimum bid:{" "}
-          <span className="font-medium text-ink">{bidQuote.minimumBidLabel}</span>
-          <span className="text-muted/80"> · Minimum increment: </span>
-          <span className="font-medium text-ink">{bidQuote.incrementLabel}</span>
-        </p>
-      </label>
+      </Field>
 
       {formDisabled ? (
-        <p className="rounded-2xl border border-amber-500/30 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           {disabledReason}
         </p>
       ) : null}
 
       {!formDisabled && isBelowMinimum ? (
-        <p className="rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
+        <p className={cn(errorBox)} role="alert">
           Enter at least {bidQuote.minimumBidLabel} to place a bid.
         </p>
       ) : null}
 
       {message ? (
-        <p
-          className={
-            message.type === "error"
-              ? "rounded-2xl border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm text-rose-300"
-              : "rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent"
-          }
-        >
+        <p className={message.type === "error" ? errorBox : successBox} role="status">
           {message.text}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-black transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {loading ? "Placing bid…" : "Place bid"}
-      </button>
+      <Button type="submit" fullWidth size="lg" loading={loading} disabled={!canSubmit}>
+        Place bid
+      </Button>
     </form>
   );
 }
